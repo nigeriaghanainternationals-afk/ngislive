@@ -405,7 +405,6 @@ tr:last-child td{border-bottom:none}
 .signature-line{text-align:center;flex:1;min-width:180px;max-width:280px}
 .signature-line .line{border-bottom:1px solid #333;margin-bottom:8px;padding-bottom:5px;min-height:24px;word-break:break-word;font-weight:600;font-size:0.85rem;color:var(--dark)}
 .signature-line p{font-size:0.8rem;color:#666}
-.ngis-search{position:relative}.ngis-search input{width:100%;padding-right:34px}.ngis-search-x{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;font-size:1.3rem;line-height:1;color:#888;cursor:pointer;padding:2px 8px}.ngis-search-count{font-size:.76rem;color:#777;margin-top:4px;min-height:1em}mark.ngis-hit{background:#fff3a3;color:inherit;padding:0 1px;border-radius:2px}
 @media print{body{background:white}.sidebar,.top-bar,.no-print{display:none !important}.main-content{margin-left:0;padding:0}.report-card{box-shadow:none;max-width:100%}.dashboard{display:block !important}#reportCardSection{display:block !important}#studentReportCardSection{display:block !important}}
 .toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px}
 .toast{padding:16px 24px;border-radius:var(--radius-sm);color:white;font-weight:500;box-shadow:var(--shadow-lg);animation:slideIn 0.3s ease-out;display:flex;align-items:center;gap:10px;min-width:300px}
@@ -647,6 +646,21 @@ table.rgt{border-collapse:separate;border-spacing:0;width:100%;font-size:.82rem;
 .rgt .rp,.rgt .ra,.rgt .rpc{font-weight:700;min-width:38px}
 button.rg{width:28px;height:26px;border:1px solid #ddd;border-radius:6px;background:#fafafa;font-weight:700;font-size:.78rem;cursor:pointer;color:#bbb;padding:0}
 button.rg:disabled{cursor:not-allowed;opacity:.55}
+.rg-days{display:none;gap:6px;margin:0 0 8px;overflow-x:auto}
+.rg-days button{flex:1;min-width:58px;border:2px solid #1a5f2a;background:#fff;color:#1a5f2a;border-radius:10px;padding:6px 4px;font-weight:700;font-size:.8rem;line-height:1.1;cursor:pointer}
+.rg-days button small{display:block;font-weight:500;font-size:.62rem;opacity:.85}
+.rg-days button.on{background:#1a5f2a;color:#fff}.rg-days button.cl{border-style:dashed;opacity:.6}
+@media(max-width:700px){
+ .rg-days{display:flex}
+ .rg-wrap{max-height:78vh}
+ .rgt{font-size:.76rem}
+ .rgt .sn{display:none}
+ .rgt .sname{min-width:112px;max-width:112px;white-space:normal;line-height:1.15;padding:3px 4px}
+ .rgt .rg-g{width:16px;height:16px;font-size:.55rem;margin-right:3px;vertical-align:middle}
+ button.rg{width:40px;height:34px;font-size:.9rem;border-radius:8px}
+ .rgt .rp,.rgt .ra,.rgt .rpc{min-width:30px}
+ .rgt thead tr:nth-child(2) th{top:34px}
+}
 button.rg.c-P{background:#27ae60;color:#fff;border-color:#27ae60}button.rg.c-A{background:#e74c3c;color:#fff;border-color:#e74c3c}
 button.rg.c-L{background:#f39c12;color:#fff;border-color:#f39c12}button.rg.c-E{background:#3498db;color:#fff;border-color:#3498db}
 .rg-x{border:0;background:rgba(255,255,255,.2);color:#fff;border-radius:4px;cursor:pointer;font-size:.65rem;margin-left:3px;padding:1px 4px}
@@ -1172,7 +1186,6 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 
 <div class="main-content">
 <div class="top-bar">
-<button type="button" id="ngisBackBtn" class="ngis-back-btn" aria-label="Go back" onclick="ngisGoBack()" style="display:none"><i class="fas fa-arrow-left"></i><span>Back</span></button>
 <h2 id="pageTitle"><i class="fas fa-home"></i> Dashboard</h2>
 <div class="user-info">
 <div class="user-avatar" id="userAvatar">T</div>
@@ -2047,18 +2060,8 @@ Only the class teacher assigned to this class can save the comment.
       <div class="form-group"><label>Week (optional)</label><select id="asgWeek"><option value="">-- None --</option></select></div>
       <div class="form-group"><label>Due Date &amp; Time</label><input type="datetime-local" id="asgDue"></div>
       <div class="form-group" id="asgMaxWrap"><label>Maximum Score</label><input type="number" id="asgMax" min="1" max="1000" step="0.5" value="10"></div>
-      <div class="form-group hidden" id="asgQuizSrcWrap"><label>CBT Questions</label>
-        <select id="asgQuizSrc" onchange="asgTypeChanged()">
-          <option value="upload">Upload a CBT question file now</option>
-          <option value="existing">Use an already published quiz</option>
-        </select></div>
       <div class="form-group hidden" id="asgQuizWrap"><label>Published CBT Quiz</label><select id="asgQuiz"><option value="">-- Select Class first --</option></select></div>
-      <div class="form-group hidden" id="asgCbtDurWrap"><label>CBT Duration (minutes)</label><input type="number" id="asgCbtDur" min="1" max="240" value="30"></div>
     </div>
-    <div class="form-group hidden" id="asgCbtFileWrap" style="margin-bottom:20px"><label><i class="fas fa-upload"></i> CBT question file (Excel, CSV, Word, PDF, PowerPoint, text, JSON or image)</label>
-      <input type="file" id="asgCbtFile" accept=".txt,.csv,.xls,.xlsx,.json,.doc,.docx,.pdf,.ppt,.pptx,.html,.htm,.png,.jpg,.jpeg,.webp" onchange="asgCbtFileChosen(this.files[0])" style="width:100%;max-width:600px">
-      <div style="font-size:.78rem;color:#777;margin-top:6px">Each question needs options A–D and an answer. The week above is required. The quiz goes live for the selected class as soon as you publish the assignment &ndash; no admin approval needed. Students are scored out of 10.</div>
-      <div id="asgCbtStatus" style="margin-top:8px;color:#777"></div></div>
     <div class="form-group" style="margin-bottom:20px"><label>Instructions</label><textarea id="asgInstr" placeholder="Tell students what to do and how to submit…"></textarea></div>
     <div class="form-group" id="asgAttachWrap" style="margin-bottom:20px"><label>Attach question file(s) for students (optional – any format)</label><input type="file" id="asgAttach" multiple></div>
     <button class="btn btn-primary" id="asgCreateBtn" onclick="asgCreate()"><i class="fas fa-paper-plane"></i> Publish Assignment</button>
@@ -2211,7 +2214,6 @@ Only the class teacher assigned to this class can save the comment.
 </div>
 </div>
 <div class="stats-grid">
-<div class="stat-card" style="cursor:pointer" onclick="ngisOpenOnline()" title="See who is online"><div class="stat-icon green"><i class="fas fa-circle"></i></div><div class="stat-info"><h4 id="adminStatOnline">0</h4><p>Staff Online Now (tap to view)</p></div></div>
 <div class="stat-card"><div class="stat-icon green"><i class="fas fa-school"></i></div><div class="stat-info"><h4 id="adminStatClasses">0</h4><p>Total Classes</p></div></div>
 <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-user-graduate"></i></div><div class="stat-info"><h4 id="adminStatStudents">0</h4><p>Total Students</p></div></div>
 <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-chalkboard-teacher"></i></div><div class="stat-info"><h4 id="adminStatTeachers">0</h4><p>Total Teachers</p></div></div>
@@ -2237,7 +2239,7 @@ Only the class teacher assigned to this class can save the comment.
 <div id="teacherStudents" class="section hidden">
 <div class="card">
 <div class="card-header"><h3><i class="fas fa-user-graduate"></i> My Class Students</h3><button class="btn btn-primary btn-sm" onclick="tsOpenAddStudent()"><i class="fas fa-plus"></i> Add Student</button></div>
-<div class="form-grid" style="margin-bottom:16px;"><div class="form-group"><label>Class</label><select id="tsStuClass" onchange="tsRenderStudents()"></select></div><div class="form-group"><label><i class="fas fa-search"></i> Search Student</label><div class="ngis-search"><input type="search" id="tsStuSearch" oninput="tsRenderStudents()" placeholder="Name or registration no…" autocomplete="off"><button type="button" class="ngis-search-x" onclick="ngisClearSearch('tsStuSearch',tsRenderStudents)" title="Clear">&times;</button></div><div class="ngis-search-count" id="tsStuSearchCount"></div></div></div>
+<div class="form-grid" style="margin-bottom:16px;"><div class="form-group"><label>Class</label><select id="tsStuClass" onchange="tsRenderStudents()"></select></div></div>
 <div class="student-login-tools"><i class="fas fa-shield-alt"></i> Each new student gets the next free registration number automatically (e.g. <b>NGIS/25/2026</b>). A number that belongs to a student can never be given to another student.</div>
 <div class="table-container"><table><thead><tr><th>#</th><th>Student Name</th><th>Registration No. (Username)</th><th>Password</th></tr></thead><tbody id="tsStuTable"></tbody></table></div>
 </div>
@@ -2286,7 +2288,7 @@ Only the class teacher assigned to this class can save the comment.
 <div id="studentsMgmt" class="section hidden">
 <div class="card">
 <div class="card-header"><h3><i class="fas fa-user-graduate"></i> Student Management</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-success btn-sm" onclick="generateMissingStudentLogins()"><i class="fas fa-key"></i> Generate / Reset All Logins</button><button class="btn btn-success btn-sm" onclick="downloadAllStudentLoginsExcel()"><i class="fas fa-file-excel"></i> Excel - All Logins</button><button class="btn btn-secondary btn-sm" onclick="downloadAllStudentLoginsWord()"><i class="fas fa-file-word"></i> Word - All Logins</button><button class="btn btn-accent btn-sm" onclick="downloadStudentWhatsAppText()"><i class="fab fa-whatsapp"></i> WhatsApp List</button><button class="btn btn-primary btn-sm" onclick="openModal('studentModal');prepareStudentLoginGenerator()"><i class="fas fa-plus"></i> Add Student</button></div></div>
-<div class="form-grid" style="margin-bottom:20px;align-items:end;"><div class="form-group"><label>Filter by Class</label><select id="studentFilterClass" onchange="loadStudents()"><option value="">All Classes</option></select></div><div class="form-group"><label><i class="fas fa-search"></i> Search Student</label><div class="ngis-search"><input type="search" id="studentSearch" oninput="renderStudentsTable()" placeholder="Name, login ID or class…" autocomplete="off"><button type="button" class="ngis-search-x" onclick="ngisClearSearch('studentSearch',renderStudentsTable)" title="Clear">&times;</button></div><div class="ngis-search-count" id="studentSearchCount"></div></div><div class="form-group"><label>Download Login Details for Class</label><select id="loginDownloadClass"><option value="">-- Select Class --</option></select></div><div class="form-group" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button class="btn btn-success btn-sm" onclick="downloadSelectedClassLoginExcel()"><i class="fas fa-file-excel"></i> Class Excel</button><button class="btn btn-secondary btn-sm" onclick="downloadSelectedClassLoginWord()"><i class="fas fa-file-word"></i> Class Word</button><button class="btn btn-accent btn-sm" onclick="downloadAllClassesLoginExcel()"><i class="fas fa-layer-group"></i> All Classes Excel</button><button class="btn btn-secondary btn-sm" onclick="downloadAllStudentLoginsWord()"><i class="fas fa-file-word"></i> All Classes Word</button></div></div>
+<div class="form-grid" style="margin-bottom:20px;align-items:end;"><div class="form-group"><label>Filter by Class</label><select id="studentFilterClass" onchange="loadStudents()"><option value="">All Classes</option></select></div><div class="form-group"><label>Download Login Details for Class</label><select id="loginDownloadClass"><option value="">-- Select Class --</option></select></div><div class="form-group" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap"><button class="btn btn-success btn-sm" onclick="downloadSelectedClassLoginExcel()"><i class="fas fa-file-excel"></i> Class Excel</button><button class="btn btn-secondary btn-sm" onclick="downloadSelectedClassLoginWord()"><i class="fas fa-file-word"></i> Class Word</button><button class="btn btn-accent btn-sm" onclick="downloadAllClassesLoginExcel()"><i class="fas fa-layer-group"></i> All Classes Excel</button><button class="btn btn-secondary btn-sm" onclick="downloadAllStudentLoginsWord()"><i class="fas fa-file-word"></i> All Classes Word</button></div></div>
 <div class="table-container"><table><thead><tr><th>#</th><th>Student Name</th><th>Login ID</th><th>Password</th><th>Login Status</th><th>Class</th><th>Actions</th></tr></thead><tbody id="studentsTable"></tbody></table></div>
 </div>
 </div>
@@ -2320,7 +2322,6 @@ Only the class teacher assigned to this class can save the comment.
 <div id="teachersMgmt" class="section hidden">
 <div class="card">
 <div class="card-header"><h3><i class="fas fa-chalkboard-teacher"></i> Teacher Management</h3><button class="btn btn-primary btn-sm" onclick="openModal('teacherModal')"><i class="fas fa-plus"></i> Add Teacher</button></div>
-<div class="form-group" style="max-width:420px;margin-bottom:14px"><label><i class="fas fa-search"></i> Search Teacher</label><div class="ngis-search"><input type="search" id="teacherSearch" oninput="renderTeachersTable()" placeholder="Name, email, subject or class…" autocomplete="off"><button type="button" class="ngis-search-x" onclick="ngisClearSearch('teacherSearch',renderTeachersTable)" title="Clear">&times;</button></div><div class="ngis-search-count" id="teacherSearchCount"></div></div>
 <div class="table-container"><table><thead><tr><th>Name</th><th>Email</th><th>Subjects</th><th>Assigned Classes</th><th>Section(s)</th><th>Role</th><th>Actions</th></tr></thead><tbody id="teachersTable"></tbody></table></div>
 </div>
 </div>
@@ -2451,7 +2452,7 @@ Only the class teacher assigned to this class can save the comment.
 <div id="cbtPendingNotice"></div><div class="card-header"><h3><i class="fas fa-list"></i> Published Quizzes & Results</h3></div>
 <div class="table-container"><table><thead><tr><th>Quiz</th><th>Class</th><th>Subject</th><th>Week</th><th>Questions</th><th>Duration</th><th>Status</th><th>Actions</th></tr></thead><tbody id="cbtQuizTable"></tbody></table></div>
 </div>
-<div class="card hidden" id="cbtResultsCard"><div class="card-header"><h3><i class="fas fa-chart-line"></i> Quiz Results</h3><button class="btn btn-sm btn-secondary" onclick="document.getElementById('cbtResultsCard').classList.add('hidden')">Close</button></div><div class="table-container"><table><thead><tr><th>Student</th><th>Class</th><th>Score</th><th>Percentage</th><th>Correct</th><th>Submitted</th><th>Review</th></tr></thead><tbody id="cbtResultsTable"></tbody></table></div></div>
+<div class="card hidden" id="cbtResultsCard"><div class="card-header"><h3><i class="fas fa-chart-line"></i> Quiz Results</h3><button class="btn btn-sm btn-secondary" onclick="document.getElementById('cbtResultsCard').classList.add('hidden')">Close</button></div><div class="table-container"><table><thead><tr><th>Student</th><th>Class</th><th>Score</th><th>Percentage</th><th>Correct</th><th>Submitted</th></tr></thead><tbody id="cbtResultsTable"></tbody></table></div></div>
 <div class="card hidden" id="cbtReviewCard">
   <div class="card-header"><h3><i class="fas fa-clipboard-check"></i> CBT Question Vetting</h3><button class="btn btn-sm btn-secondary" onclick="closeCBTReview()">Close</button></div>
   <div id="cbtReviewContent"></div>
@@ -3557,25 +3558,17 @@ async function saveSubject(){
   try{await loadTeachers();}catch(e){console.warn('Teacher refresh after subject creation failed:',e);}
 }
 
-function ngisNorm(v){return String(v==null?'':v).toLowerCase().replace(/\s+/g,' ').trim();}
-// Every word typed must appear somewhere in the row's fields (any order), so "ada p1" finds Ada in Primary 1.
-function ngisMatch(fields,q){const hay=ngisNorm((fields||[]).join(' '));return q.split(' ').every(w=>hay.indexOf(w)>-1);}
-function ngisClearSearch(id,fn){const el=document.getElementById(id);if(el){el.value='';el.focus();}try{fn();}catch(e){}}
 function escapeHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
 function renderStudentsTable(){
 const filterClass=document.getElementById('studentFilterClass')?.value;
 let filtered=students;
 if(filterClass)filtered=students.filter(s=>String(s.class_id)===String(filterClass));
-const q=ngisNorm(document.getElementById('studentSearch')?.value);
-if(q)filtered=filtered.filter(s=>ngisMatch([s.name,s.student_login_id,s.classes?.name||getStudentClassName(s)],q));
-const cnt=document.getElementById('studentSearchCount');
-if(cnt)cnt.textContent=q?(filtered.length+' of '+(filterClass?students.filter(s=>String(s.class_id)===String(filterClass)).length:students.length)+' students'):'';
 const tbody=document.getElementById('studentsTable');
 if(!tbody)return;
 tbody.innerHTML=filtered.map((s,i)=>{
  const ready=!!(s.student_login_id&&s.student_password);
  return '<tr><td>'+(i+1)+'</td><td><strong>'+escapeHtml(s.name)+'</strong></td><td><code>'+escapeHtml(s.student_login_id||'-')+'</code></td><td><span style="font-weight:700">'+escapeHtml(s.student_password||'-')+'</span></td><td>'+(ready?'<span style="color:green;font-weight:600">Ready</span>':'<span style="color:#d97706;font-weight:600">Not set</span>')+'</td><td>'+escapeHtml(s.classes?.name||getStudentClassName(s)||'-')+'</td><td><button type="button" class="btn btn-primary btn-sm edit-student-btn" data-student-id="'+escapeHtml(s.id)+'" style="margin-right:5px"><i class="fas fa-edit"></i> Edit / Login</button><button type="button" class="btn btn-danger btn-sm delete-student-btn" data-student-id="'+escapeHtml(s.id)+'"><i class="fas fa-trash"></i></button></td></tr>';
-}).join('')||'<tr><td colspan="7" class="empty-state">'+(q?'No student matches your search':'No students yet')+'</td></tr>';
+}).join('')||'<tr><td colspan="7" class="empty-state">No students yet</td></tr>';
 }
 let editingStudentId=null;
 document.addEventListener('click',function(e){
@@ -3618,8 +3611,6 @@ loadStudents();
 function renderTeachersTable(){
   const tbody=document.getElementById('teachersTable');
   if(!tbody)return;
-  const q=ngisNorm(document.getElementById('teacherSearch')?.value);
-  const rows=[];
   tbody.innerHTML=teachers.map(t=>{
     let subjNames='-';
     if(t.teacher_subjects?.length){
@@ -3628,13 +3619,8 @@ function renderTeachersTable(){
     const assignedClasses=(classTeachers||[]).filter(ct=>String(ct.teacher_id)===String(t.id)).map(ct=>ct.classes?.name||classes.find(c=>String(c.id)===String(ct.class_id))?.name||ct.class_id).filter(Boolean);
     const classNames=assignedClasses.length?assignedClasses.join(', '):'None';
     const sectionNames=(t.ngis_sections||[]).map(k=>NGIS_SECTION_NAMES[k]||k).join(', ')||'Not assigned';
-    rows.push(t);
-    if(q&&!ngisMatch([t.name,t.email,subjNames,classNames,sectionNames,t.role],q)){rows.pop();return '';}
-    return '<tr><td><strong>'+escapeHtml(t.name||'')+'</strong></td><td>'+escapeHtml(t.email||'')+'</td><td>'+escapeHtml(subjNames)+'</td><td>'+escapeHtml(classNames)+'</td><td>'+escapeHtml(sectionNames)+'</td><td><span class="grade-badge '+(t.role==='admin'?'grade-a':'grade-c')+'">'+escapeHtml((t.role||'teacher').toUpperCase())+'</span></td><td><button type="button" class="btn btn-primary btn-sm edit-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'" onclick="return ngisOpenTeacherEdit(event,this)" style="margin-right:5px"><i class="fas fa-edit"></i> Edit</button><button type="button" class="btn btn-danger btn-sm delete-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'"><i class="fas fa-trash"></i></button></td></tr>';
+    return '<tr><td><strong>'+escapeHtml(t.name||'')+'</strong></td><td>'+escapeHtml(t.email||'')+'</td><td>'+escapeHtml(subjNames)+'</td><td>'+escapeHtml(classNames)+'</td><td><span class="grade-badge '+(t.role==='admin'?'grade-a':'grade-c')+'">'+escapeHtml((t.role||'teacher').toUpperCase())+'</span></td><td>'+escapeHtml(sectionNames)+'</td><td><button type="button" class="btn btn-primary btn-sm edit-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'" onclick="return ngisOpenTeacherEdit(event,this)" style="margin-right:5px"><i class="fas fa-edit"></i> Edit</button><button type="button" class="btn btn-danger btn-sm delete-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'"><i class="fas fa-trash"></i></button></td></tr>';
   }).join('')||'<tr><td colspan="7" class="empty-state">No teachers yet</td></tr>';
-  if(q&&!rows.length)tbody.innerHTML='<tr><td colspan="7" class="empty-state">No teacher matches your search</td></tr>';
-  const cnt=document.getElementById('teacherSearchCount');
-  if(cnt)cnt.textContent=q?(rows.length+' of '+teachers.length+' teachers'):'';
 }
 
 document.addEventListener('click',function(e){
@@ -6100,10 +6086,7 @@ async function viewCBTResults(quizId){
   const {data,error}=await supabaseClient.from('quiz_attempts').select('*,students(name,class_id,classes(name))').eq('quiz_id',quizId).order('submitted_at',{ascending:false});
   if(error){showToast('Unable to load quiz results: '+error.message,'error');return;}
   document.getElementById('cbtResultsCard').classList.remove('hidden'); const tb=document.getElementById('cbtResultsTable');
-  tb.innerHTML=(data||[]).map(a=>'<tr><td><strong>'+cbtEsc(a.students?.name||'-')+'</strong></td><td>'+cbtEsc(a.students?.classes?.name||'-')+'</td><td><strong>'+Number(a.score||0).toFixed(2)+' / 10</strong></td><td>'+Number(a.percentage||0).toFixed(1)+'%</td><td>'+a.correct_count+' / '+a.total_questions+'</td><td>'+ (a.submitted_at?new Date(a.submitted_at).toLocaleString():'-')+'</td><td><button type="button" class="btn btn-sm btn-primary" onclick="cbtOpenReview({attemptId:\''+a.id+'\',who:\'teacher\'})"><i class="fas fa-search"></i> Wrong answers</button></td></tr>').join('')||'<tr><td colspan="7" class="empty-state">No attempts yet</td></tr>';
-  const hb=document.getElementById('cbtResultsCard').querySelector('.card-header');
-  if(hb&&!document.getElementById('cbtResultsMiss')){const b=document.createElement('button');b.id='cbtResultsMiss';b.type='button';b.className='btn btn-sm btn-accent';b.style.marginRight='8px';b.innerHTML='<i class="fas fa-chart-bar"></i> Most-missed questions';hb.insertBefore(b,hb.lastElementChild);}
-  const mb=document.getElementById('cbtResultsMiss');if(mb)mb.onclick=()=>cbtOpenAnalysis(quizId);
+  tb.innerHTML=(data||[]).map(a=>'<tr><td><strong>'+cbtEsc(a.students?.name||'-')+'</strong></td><td>'+cbtEsc(a.students?.classes?.name||'-')+'</td><td><strong>'+Number(a.score||0).toFixed(2)+' / 10</strong></td><td>'+Number(a.percentage||0).toFixed(1)+'%</td><td>'+a.correct_count+' / '+a.total_questions+'</td><td>'+ (a.submitted_at?new Date(a.submitted_at).toLocaleString():'-')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty-state">No attempts yet</td></tr>';
 }
 function shuffleArray(a){const x=[...a];for(let i=x.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[x[i],x[j]]=[x[j],x[i]];}return x;}
 async function loadStudentQuizzes(){
@@ -6113,7 +6096,7 @@ async function loadStudentQuizzes(){
   if(error){box.innerHTML='<div class="empty-state">CBT database tables are not ready. Ask the administrator to run add_cbt_schema.sql.</div>';return;}
   if(!data?.length){box.innerHTML='<div class="empty-state"><i class="fas fa-clipboard-check"></i><h4>No CBT quiz is available</h4><p>Your administrator will publish quizzes for your class.</p></div>';return;}
   const ids=data.map(x=>x.id);const {data:attempts}=await supabaseClient.from('quiz_attempts').select('quiz_id,status,score,percentage').eq('student_id',currentUser.id).in('quiz_id',ids);const amap={};(attempts||[]).forEach(a=>amap[a.quiz_id]=a);
-  box.innerHTML=data.map(q=>{const a=amap[q.id];const done=a?.status==='submitted'||a?.status==='expired';return '<div style="border:1px solid #eee;border-radius:14px;padding:18px;margin-bottom:12px;display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap"><div><h4 style="color:var(--primary);margin-bottom:5px">'+cbtEsc(q.title)+'</h4><p style="color:#777;font-size:.85rem">'+cbtEsc(q.subjects?.name||'Subject')+' • '+cbtEsc(window.cbtTypeLabel(q))+' • '+q.quiz_questions.length+' questions • '+q.duration_minutes+' minutes</p></div><div>'+(done?'<span class="cbt-badge">Completed: '+Number(a.score||0).toFixed(1)+'/10</span> <button type="button" class="btn btn-sm btn-secondary" onclick="cbtOpenReview({quizId:\''+q.id+'\',studentId:\''+currentUser.id+'\',who:\'student\'})"><i class="fas fa-search"></i> Review corrections</button>':'<button class="btn btn-primary" onclick="startStudentQuiz(\''+q.id+'\')"><i class="fas fa-play"></i> Start Quiz</button>')+'</div></div>';}).join('');
+  box.innerHTML=data.map(q=>{const a=amap[q.id];const done=a?.status==='submitted'||a?.status==='expired';return '<div style="border:1px solid #eee;border-radius:14px;padding:18px;margin-bottom:12px;display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap"><div><h4 style="color:var(--primary);margin-bottom:5px">'+cbtEsc(q.title)+'</h4><p style="color:#777;font-size:.85rem">'+cbtEsc(q.subjects?.name||'Subject')+' • '+cbtEsc(window.cbtTypeLabel(q))+' • '+q.quiz_questions.length+' questions • '+q.duration_minutes+' minutes</p></div><div>'+(done?'<span class="cbt-badge">Completed: '+Number(a.score||0).toFixed(1)+'/10</span>':'<button class="btn btn-primary" onclick="startStudentQuiz(\''+q.id+'\')"><i class="fas fa-play"></i> Start Quiz</button>')+'</div></div>';}).join('');
 }
 async function startStudentQuiz(quizId){
   if(cbtRunner){showToast('A quiz is already in progress','error');return;}
@@ -7003,27 +6986,10 @@ async function asgTeacherInit(){
 }
 function asgTypeChanged(){
   const cbt=asgVal('asgType')==='cbt';
-  const up=cbt&&asgVal('asgQuizSrc')!=='existing';
-  document.getElementById('asgQuizSrcWrap').classList.toggle('hidden',!cbt);
-  document.getElementById('asgQuizWrap').classList.toggle('hidden',!cbt||up);
-  document.getElementById('asgCbtFileWrap').classList.toggle('hidden',!up);
-  document.getElementById('asgCbtDurWrap').classList.toggle('hidden',!up);
+  document.getElementById('asgQuizWrap').classList.toggle('hidden',!cbt);
   document.getElementById('asgMaxWrap').classList.toggle('hidden',cbt);
   document.getElementById('asgAttachWrap').classList.toggle('hidden',cbt);
-  if(cbt&&!up)asgLoadQuizOptions();
-}
-let asgCbtBuffer=[];
-async function asgCbtFileChosen(file){
-  const st=document.getElementById('asgCbtStatus');asgCbtBuffer=[];
-  if(!file){st.textContent='';return;}
-  st.textContent='Reading '+file.name+'…';
-  try{
-    const r=await extractFileText(file);let qs=r.questions||[];
-    if(!qs.length&&r.text)qs=parseQuestionText(r.text);
-    asgCbtBuffer=qs;
-    st.innerHTML=qs.length?'<span style="color:#1a5f2a;font-weight:700">✓ '+qs.length+' questions detected and ready.</span>'
-      :'<span style="color:#c41e3a;font-weight:700">No complete MCQ set detected. Use the CBT template format (question, A, B, C, D, answer).</span>';
-  }catch(e){st.textContent='Could not read this file: '+(e&&e.message||e);}
+  if(cbt)asgLoadQuizOptions();
 }
 function asgClassChanged(){if(asgVal('asgType')==='cbt')asgLoadQuizOptions();}
 let asgQuizCache=[];
@@ -7046,52 +7012,30 @@ async function asgCreate(){
   if(!title){showToast('Enter an assignment title','error');return;}
   if(!classId){showToast('Select the class','error');return;}
   let quiz=null,max=Number(document.getElementById('asgMax').value);
-  let uploadMode=false;
   if(type==='cbt'){
-    if(asgVal('asgQuizSrc')!=='existing'){
-      uploadMode=true;
-      if(!asgCbtBuffer.length){showToast('Upload a valid CBT question file first','error');return;}
-      if(!subjectId){showToast('Select the subject','error');return;}
-      if(!weekId){showToast('Select the week for this CBT','error');return;}
-      max=10;
-    }else{
-      quiz=asgQuizCache.find(x=>sameId(x.id,asgVal('asgQuiz')));
-      if(!quiz){showToast('Select a published CBT quiz','error');return;}
-      max=10;subjectId=subjectId||String(quiz.subject_id||'');weekId=weekId||String(quiz.week_id||'');
-    }
+    quiz=asgQuizCache.find(x=>sameId(x.id,asgVal('asgQuiz')));
+    if(!quiz){showToast('Select a published CBT quiz','error');return;}
+    max=10;subjectId=subjectId||String(quiz.subject_id||'');weekId=weekId||String(quiz.week_id||'');
   }
   if(!subjectId){showToast('Select the subject','error');return;}
   if(!(max>0)){showToast('Maximum score must be greater than 0','error');return;}
   const files=[...(document.getElementById('asgAttach').files||[])];
   if(files.length>ASG_MAX_FILES){showToast('Attach at most '+ASG_MAX_FILES+' files','error');return;}
   const btn=document.getElementById('asgCreateBtn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Publishing…';
-  const id=asgUuid();let attachments=[];let newQuizId=null;
+  const id=asgUuid();let attachments=[];
   try{
     if(type==='file'&&files.length)attachments=await asgUploadFiles(files,'teacher/'+asgSafe(currentUser.id)+'/'+id);
-    if(uploadMode){
-      const dur=Math.max(1,Math.min(240,parseInt(document.getElementById('asgCbtDur').value)||30));
-      const qr=await supabaseClient.from('quizzes').insert([{title,class_id:classId,subject_id:subjectId,week_id:weekId,teacher_id:currentUser.id,duration_minutes:dur,max_score:10,pass_score:5,status:'published',shuffle_questions:true,shuffle_options:true,attempts_allowed:1}]).select().single();
-      if(qr.error){
-        const m=String(qr.error.message||'');
-        throw new Error(/row-level security|permission denied/i.test(m)?'Supabase security rules block teachers from creating quizzes. Ask the administrator to allow teachers to insert into quizzes and quiz_questions.':m);
-      }
-      newQuizId=String(qr.data.id);
-      const recs=asgCbtBuffer.map((x,i)=>({...x,quiz_id:qr.data.id,question_no:i+1,marks:1}));
-      const qe=await supabaseClient.from('quiz_questions').insert(recs);
-      if(qe.error){await supabaseClient.from('quizzes').delete().eq('id',qr.data.id);newQuizId=null;throw qe.error;}
-    }
     const nameOf=(list,v)=>(list||[]).find(x=>sameId(x.id,v))?.name||'';
-    const row={id,title,instructions:instr||null,assignment_type:type,quiz_id:type==='cbt'?(newQuizId||String(quiz.id)):null,
+    const row={id,title,instructions:instr||null,assignment_type:type,quiz_id:type==='cbt'?String(quiz.id):null,
       class_id:String(classId),class_name:nameOf(classes,classId),subject_id:String(subjectId),subject_name:nameOf(subjects,subjectId),
       week_id:weekId?String(weekId):null,week_name:weekId?nameOf(weeks,weekId):null,
       teacher_id:String(currentUser.id),teacher_name:currentUser.name,
       due_date:dueRaw?new Date(dueRaw).toISOString():null,max_score:max,attachments};
     const {error}=await supabaseClient.from('assignments').insert([row]);
-    if(error){await asgRemovePaths(attachments.map(a=>a.path));if(newQuizId){await supabaseClient.from('quiz_questions').delete().eq('quiz_id',newQuizId);await supabaseClient.from('quizzes').delete().eq('id',newQuizId);}throw error;}
+    if(error){await asgRemovePaths(attachments.map(a=>a.path));throw error;}
     showToast('Assignment published to '+row.class_name,'success');
     ['asgTitle','asgInstr','asgDue'].forEach(k=>document.getElementById(k).value='');
     document.getElementById('asgAttach').value='';
-    asgCbtBuffer=[];{const f=document.getElementById('asgCbtFile');if(f)f.value='';const st=document.getElementById('asgCbtStatus');if(st)st.textContent='';}
     asgLoadList();
   }catch(e){showToast(asgErrMsg(e),'error');}
   finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane"></i> Publish Assignment';}
@@ -7167,7 +7111,7 @@ async function asgOpenReview(id){
   asgCurrent=a;
   const card=document.getElementById('asgReviewCard');card.classList.remove('hidden');
   document.getElementById('asgReviewTitle').textContent=a.title;
-  document.getElementById('asgReviewMeta').innerHTML='<strong>'+asgEsc(a.class_name||'')+'</strong> • '+asgEsc(a.subject_name||'')+(a.week_name?' • '+asgEsc(a.week_name):'')+' • Due: '+asgFmtDate(a.due_date)+' • Max score: <strong>'+a.max_score+'</strong>'+(a.assignment_type==='cbt'&&a.quiz_id?' <button type="button" class="btn btn-sm btn-accent" style="margin-left:8px" onclick="cbtOpenAnalysis(\''+asgEsc(a.quiz_id)+'\')"><i class="fas fa-chart-bar"></i> Most-missed questions</button>':'');
+  document.getElementById('asgReviewMeta').innerHTML='<strong>'+asgEsc(a.class_name||'')+'</strong> • '+asgEsc(a.subject_name||'')+(a.week_name?' • '+asgEsc(a.week_name):'')+' • Due: '+asgFmtDate(a.due_date)+' • Max score: <strong>'+a.max_score+'</strong>';
   document.getElementById('asgFilter').value='all';document.getElementById('asgSearch').value='';
   document.getElementById('asgSaveAllBtn').classList.toggle('hidden',a.assignment_type==='cbt');
   document.getElementById('asgReviewHead').innerHTML='';
@@ -7178,7 +7122,7 @@ async function asgOpenReview(id){
     if(se)throw se;
     let map={};
     if(a.assignment_type==='cbt'){
-      const {data,error}=await supabaseClient.from('quiz_attempts').select('id,student_id,score,percentage,correct_count,total_questions,submitted_at,status').eq('quiz_id',a.quiz_id);
+      const {data,error}=await supabaseClient.from('quiz_attempts').select('student_id,score,percentage,correct_count,total_questions,submitted_at,status').eq('quiz_id',a.quiz_id);
       if(error)throw error;(data||[]).forEach(r=>map[String(r.student_id)]=r);
       asgRows=(studs||[]).map(s=>({student:s,att:map[String(s.id)]||null}));
     }else{
@@ -7207,14 +7151,13 @@ function asgRenderReview(){
     if(f==='graded')return graded;if(f==='missing')return !submitted&&!graded;if(f==='pending')return submitted&&!graded;return true;
   });
   if(cbt){
-    head.innerHTML='<tr><th>#</th><th>Student</th><th>Class / Arm</th><th>Status</th><th>Score (/10)</th><th>Percent</th><th>Correct</th><th>Submitted</th><th>Wrong answers</th></tr>';
+    head.innerHTML='<tr><th>#</th><th>Student</th><th>Class / Arm</th><th>Status</th><th>Score (/10)</th><th>Percent</th><th>Correct</th><th>Submitted</th></tr>';
     body.innerHTML=items.map(({r},n)=>{const t=r.att;
       return '<tr><td>'+(n+1)+'</td><td><strong>'+asgEsc(r.student.name)+'</strong></td><td>'+asgEsc(a.class_name||'')+'</td>'
         +'<td>'+(t?'<span class="asg-badge green">Completed</span>':'<span class="asg-badge orange">Not attempted</span>')+'</td>'
         +'<td><strong>'+(t?Number(t.score||0).toFixed(1):'—')+'</strong></td><td>'+(t?Number(t.percentage||0).toFixed(1)+'%':'—')+'</td>'
-        +'<td>'+(t?t.correct_count+' / '+t.total_questions:'—')+'</td><td>'+(t?.submitted_at?asgFmtDate(t.submitted_at):'—')+'</td>'
-        +'<td>'+(t?'<button type="button" class="btn btn-sm btn-primary" onclick="cbtOpenReview({attemptId:\''+asgEsc(t.id)+'\',who:\'teacher\'})"><i class="fas fa-search"></i> View</button>':'—')+'</td></tr>';
-    }).join('')||'<tr><td colspan="9" class="empty-state">No students match.</td></tr>';
+        +'<td>'+(t?t.correct_count+' / '+t.total_questions:'—')+'</td><td>'+(t?.submitted_at?asgFmtDate(t.submitted_at):'—')+'</td></tr>';
+    }).join('')||'<tr><td colspan="8" class="empty-state">No students match.</td></tr>';
     return;
   }
   head.innerHTML='<tr><th>#</th><th>Student</th><th>Class / Arm</th><th>Status</th><th>Submitted</th><th>Student\'s work</th><th>Score / '+a.max_score+'</th><th>Feedback</th><th></th></tr>';
@@ -7354,7 +7297,7 @@ function asgStudentCard(a,i){
   if(cbt){
     if(att){
       badge='<span class="asg-badge green">Completed</span>';
-      body='<div class="asg-score">'+Number(att.score||0).toFixed(1)+'<small>/ 10</small></div> <span style="color:#777;margin-left:8px">'+Number(att.percentage||0).toFixed(1)+'% • '+att.correct_count+' / '+att.total_questions+' correct</span> <button type="button" class="btn btn-sm btn-secondary" style="margin-left:8px" onclick="cbtOpenReview({quizId:\''+asgEsc(a.quiz_id)+'\',studentId:\''+currentUser.id+'\',who:\'student\'})"><i class="fas fa-search"></i> Review corrections</button>';
+      body='<div class="asg-score">'+Number(att.score||0).toFixed(1)+'<small>/ 10</small></div> <span style="color:#777;margin-left:8px">'+Number(att.percentage||0).toFixed(1)+'% • '+att.correct_count+' / '+att.total_questions+' correct</span>';
     }else{
       badge=overdue?'<span class="asg-badge red">Overdue</span>':'<span class="asg-badge orange">Not taken</span>';
       body='<button class="btn btn-primary btn-sm" onclick="asgTakeCbt(\''+asgEsc(a.quiz_id)+'\')"><i class="fas fa-laptop-code"></i> Take CBT Now</button>';
@@ -8124,6 +8067,11 @@ window.regFillWeeks=function(){
   if(old&&l.some(w=>sameId(w.id,old)))sel.value=old;else{const t=new Date().toISOString().slice(0,10),cur=l.find(w=>w.start_date&&w.end_date&&w.start_date<=t&&t<=w.end_date);sel.value=cur?cur.id:(l.length?l[l.length-1].id:'');}
   regRender();
 };
+let regDaySel=-1;
+const regMob=()=>window.matchMedia('(max-width:700px)').matches;
+const regIdx=()=>regMob()?[regDaySel*2,regDaySel*2+1]:[0,1,2,3,4,5,6,7,8,9];
+window.regPickDay=function(d){regDaySel=d;regRender();};
+window.addEventListener('resize',()=>{const m=regMob();if(window.__regM!==undefined&&window.__regM!==m&&$('regGrid')&&$('regGrid').firstChild)regRender();window.__regM=m;});
 function cellHtml(ch,i,on){return'<td><button class="rg c-'+(ch==='-'?'n':ch)+'" data-i="'+i+'"'+(on?'':' disabled')+'>'+(ch==='-'?'·':ch)+'</button></td>';}
 window.regRender=function(){
   const cid=$('regClass').value,wid=$('regWeek').value,box=$('regGrid');
@@ -8131,14 +8079,18 @@ window.regRender=function(){
   const w=wObj(wid),stu=classStudents(cid);
   if(!stu.length){box.innerHTML='<div class="empty-state">No students in this class yet.</div>';return;}
   const meta=getMeta(cid,wid),edit=canEditClass(cid,meta);
-  let h='<div class="rg-wrap"><table class="rgt"><thead><tr><th rowspan="2" class="sn">#</th><th rowspan="2" class="sname">Student</th>';
-  DL.forEach((d,i)=>{const cl=meta.closed[i]==='1';h+='<th colspan="2" class="'+(cl?'cl':'')+'">'+d+'<small>'+wDate(w,i)+'</small>'+(edit?'<button class="rg-x" title="No-school day on/off" onclick="regDay('+i+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i></button>':'')+'</th>';});
+  if(regDaySel<0||regDaySel>4){const t=new Date().toISOString().slice(0,10);regDaySel=(w&&w.start_date&&w.end_date&&w.start_date<=t&&t<=w.end_date)?Math.min(4,Math.max(0,(new Date().getDay()+6)%7)):0;}
+  const IDX=regIdx();
+  let h='';
+  if(regMob()){h+='<div class="rg-days">'+DL.map((d,i)=>'<button class="'+(i===regDaySel?'on ':'')+(meta.closed[i]==='1'?'cl':'')+'" onclick="regPickDay('+i+')">'+['Mon','Tue','Wed','Thu','Fri'][i]+'<small>'+wDate(w,i)+'</small></button>').join('')+'</div>';}
+  h+='<div class="rg-wrap"><table class="rgt"><thead><tr><th rowspan="2" class="sn">#</th><th rowspan="2" class="sname">Student</th>';
+  DL.forEach((d,i)=>{if(regMob()&&i!==regDaySel)return;const cl=meta.closed[i]==='1';h+='<th colspan="2" class="'+(cl?'cl':'')+'">'+d+'<small>'+wDate(w,i)+'</small>'+(edit?'<button class="rg-x" title="No-school day on/off" onclick="regDay('+i+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i></button>':'')+'</th>';});
   h+='<th rowspan="2">Pres</th><th rowspan="2">Abs</th><th rowspan="2">%</th></tr><tr>';
-  for(let i=0;i<10;i++)h+='<th>'+(i%2?'PM':'AM')+(edit&&meta.closed[i>>1]!=='1'?'<button class="rg-x" title="Mark column present" onclick="regAll('+i+')">✓</button>':'')+'</th>';
+  IDX.forEach(i=>{h+='<th>'+(i%2?'PM':'AM')+(edit&&meta.closed[i>>1]!=='1'?'<button class="rg-x" title="Mark column present" onclick="regAll('+i+')">✓</button>':'')+'</th>';});
   h+='</tr></thead><tbody>';
   stu.forEach((s,n)=>{const m=marksOf(s.id,wid),g=gender(s);
     h+='<tr data-sid="'+esc(s.id)+'"><td class="sn">'+(n+1)+'</td><td class="sname"><button class="rg-g '+g+'" title="Set Boy / Girl">'+(g||'?')+'</button>'+esc(s.name)+'</td>';
-    for(let i=0;i<10;i++){const cl=meta.closed[i>>1]==='1';h+=cl?'<td class="cl">—</td>':cellHtml(m[i],i,edit);}
+    IDX.forEach(i=>{const cl=meta.closed[i>>1]==='1';h+=cl?'<td class="cl">—</td>':cellHtml(m[i],i,edit);});
     h+='<td class="rp"></td><td class="ra"></td><td class="rpc"></td></tr>';});
   h+='</tbody><tfoot id="regFoot"></tfoot></table></div><div id="regSum"></div>';
   box.innerHTML=h;regCalc();
@@ -8147,7 +8099,7 @@ function regCalc(){
   const cid=$('regClass').value,wid=$('regWeek').value;if(!cid||!wid||!$('regFoot'))return;
   const c=calcWeek(cid,wid),meta=getMeta(cid,wid);
   document.querySelectorAll('#regGrid tbody tr').forEach((tr,i)=>{const r=c.rows[i];if(!r)return;tr.querySelector('.rp').textContent=r.p;tr.querySelector('.ra').textContent=r.a;const e=tr.querySelector('.rpc');e.textContent=fp(r.pct);e.className='rpc '+pcCls(r.pct);});
-  const row=(lbl,f,tot)=>{let x='<tr><td colspan="2" class="lbl">'+lbl+'</td>';for(let i=0;i<10;i++)x+=meta.closed[i>>1]==='1'?'<td>—</td>':'<td>'+f(c.half[i])+'</td>';return x+'<td colspan="3">'+tot+'</td></tr>';};
+  const row=(lbl,f,tot)=>{let x='<tr><td colspan="2" class="lbl">'+lbl+'</td>';regIdx().forEach(i=>{x+=meta.closed[i>>1]==='1'?'<td>—</td>':'<td>'+f(c.half[i])+'</td>';});return x+'<td colspan="3">'+tot+'</td></tr>';};
   $('regFoot').innerHTML=row('Boys present',h=>h.B,c.bP)+row('Girls present',h=>h.G,c.gP)+(c.unk?row('Gender not set',h=>h.U,''):'')+row('Total present',h=>h.B+h.G+h.U,c.P)+row('Total absent',h=>h.abs,c.A);
   const sg=meta.signed_by?'<div class="rg-sign">'+esc(meta.signed_by)+'</div><small>Signed '+esc(S(meta.signed_at).slice(0,10))+(meta.locked?' · locked':'')+'</small>':'<div class="rg-sign"></div><small>Not yet signed</small>';
   $('regSum').innerHTML='<div class="rg-sum">'+
@@ -12429,12 +12381,8 @@ window.generateMissingStudentLogins=async function(){
 window.tsRenderStudents=function(){
   const tb=$('tsStuTable');if(!tb)return;
   const cid=$('tsStuClass')?.value;
-  let list=(students||[]).filter(s=>cid&&String(s.class_id)===String(cid)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
-  const total=list.length;
-  const q=ngisNorm($('tsStuSearch')?.value);
-  if(q)list=list.filter(s=>ngisMatch([s.name,s.student_login_id],q));
-  const cnt=$('tsStuSearchCount');if(cnt)cnt.textContent=q?(list.length+' of '+total+' students'):'';
-  tb.innerHTML=list.map((s,i)=>'<tr><td>'+(i+1)+'</td><td><strong>'+E(s.name||'')+'</strong></td><td><code>'+E(s.student_login_id||'-')+'</code></td><td>'+E(s.student_password||'-')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty-state">'+(cid?(q?'No student matches your search':'No students in this class yet'):'Choose a class')+'</td></tr>';
+  const list=(students||[]).filter(s=>cid&&String(s.class_id)===String(cid)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  tb.innerHTML=list.map((s,i)=>'<tr><td>'+(i+1)+'</td><td><strong>'+E(s.name||'')+'</strong></td><td><code>'+E(s.student_login_id||'-')+'</code></td><td>'+E(s.student_password||'-')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty-state">'+(cid?'No students in this class yet':'Choose a class')+'</td></tr>';
 };
 async function tsInit(){
   const sel=$('tsStuClass');if(!sel)return;
@@ -14535,307 +14483,5 @@ window.showSection=function(id,nav){_sx(id,nav);if(id==='caRecord'){const pt=$('
 })();
 </script>
 
-
-<script>
-/* ===== CBT corrections review: wrong answers + correct answers for students and teachers ===== */
-(function(){
-  var E=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});};
-  var KEYS=['A','B','C','D'];
-  function opt(q,k){return q['option_'+k.toLowerCase()]||'';}
-  function norm(x){return String(x==null?'':x).trim().toUpperCase();}
-  function isWrong(q,ans){return norm(ans[q.id])!==norm(q.correct_answer);}
-  var css=document.createElement('style');
-  css.textContent='.cr-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 12px}'
-   +'.cr-box{background:#fff;border-radius:16px;max-width:760px;width:100%;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.3)}'
-   +'.cr-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}.cr-head h3{margin:0;color:#1a5f2a;font-size:1.1rem}'
-   +'.cr-sum{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 14px}.cr-sum div{flex:1;min-width:120px;padding:10px 12px;border-radius:10px;background:#f4f7f5;font-size:.82rem;color:#555}.cr-sum b{display:block;font-size:1.3rem;color:#222}'
-   +'.cr-q{border:1px solid #eee;border-left:4px solid #dc3545;border-radius:10px;padding:12px 14px;margin-bottom:12px}.cr-q .qt{font-weight:700;line-height:1.5;margin-bottom:8px}'
-   +'.cr-o{padding:7px 10px;border-radius:8px;margin:4px 0;font-size:.9rem;border:1px solid #eee}.cr-o.ok{background:#e8f5e9;border-color:#9ccc9f;color:#14501f;font-weight:600}.cr-o.bad{background:#fdecea;border-color:#f1a9a0;color:#9b1c1c;font-weight:600}'
-   +'.cr-tag{font-size:.7rem;font-weight:800;text-transform:uppercase;margin-left:6px}.cr-top{font-size:.78rem;color:#777;margin-top:6px}'
-   +'.cr-perfect{text-align:center;padding:22px;color:#1a5f2a}.cr-perfect i{font-size:2.4rem}'
-   +'.cr-bar{height:8px;background:#eee;border-radius:6px;overflow:hidden;margin:4px 0 8px}.cr-bar i{display:block;height:100%;background:#dc3545}';
-  document.head.appendChild(css);
-
-  function qCard(q,n,ans,who){
-    var ua=norm(ans[q.id]),ca=norm(q.correct_answer);
-    var you=who==='teacher'?"Student's answer":'Your answer';
-    var h='<div class="cr-q"><div class="qt">'+n+'. '+E(q.question_text||'')+'</div>';
-    KEYS.forEach(function(k){
-      var cls='',tag='';
-      if(k===ca){cls=' ok';tag='<span class="cr-tag">✓ Correct answer</span>';}
-      else if(k===ua){cls=' bad';tag='<span class="cr-tag">✗ '+you+'</span>';}
-      h+='<div class="cr-o'+cls+'"><b>'+k+'.</b> '+E(opt(q,k))+tag+'</div>';
-    });
-    if(!ua)h+='<div class="cr-top" style="color:#9b1c1c"><b>Not answered.</b></div>';
-    var tp=q.topic||q.topic_concern;
-    if(tp&&tp!=='General / Review required')h+='<div class="cr-top">Topic: '+E(tp)+'</div>';
-    return h+'</div>';
-  }
-  window.cbtReviewHtml=function(qs,ans,who){
-    ans=ans||{};qs=qs||[];
-    var wrong=qs.filter(function(q){return isWrong(q,ans);});
-    var total=qs.length,right=total-wrong.length;
-    var h='<div class="cr-sum"><div><b style="color:#1a5f2a">'+right+'</b>Correct</div><div><b style="color:#c41e3a">'+wrong.length+'</b>Wrong / unanswered</div><div><b>'+total+'</b>Total questions</div></div>';
-    if(!wrong.length)return h+'<div class="cr-perfect"><i class="fas fa-check-circle"></i><h4 style="margin-top:8px">'+(who==='teacher'?'This student answered every question correctly.':'Perfect! You answered every question correctly.')+'</h4></div>';
-    h+='<h4 style="margin:6px 0 10px;color:#9b1c1c"><i class="fas fa-exclamation-circle"></i> '+(who==='teacher'?'Questions answered wrongly':'Questions to learn from')+'</h4>';
-    return h+wrong.map(function(q,i){return qCard(q,i+1,ans,who);}).join('');
-  };
-  function openModal(title,html){
-    var old=document.getElementById('crOv');if(old)old.remove();
-    var o=document.createElement('div');o.className='cr-ov';o.id='crOv';
-    o.innerHTML='<div class="cr-box"><div class="cr-head"><h3>'+title+'</h3><button type="button" class="btn btn-sm btn-secondary" id="crClose">Close</button></div><div>'+html+'</div></div>';
-    o.addEventListener('click',function(e){if(e.target===o)o.remove();});
-    document.body.appendChild(o);document.getElementById('crClose').onclick=function(){o.remove();};
-  }
-  function loading(){openModal('Loading…','<div style="padding:20px;text-align:center;color:#777"><i class="fas fa-spinner fa-spin"></i></div>');}
-  async function questionsOf(quizId){
-    var r=await supabaseClient.from('quiz_questions').select('*').eq('quiz_id',quizId).order('question_no');
-    if(r.error)throw r.error;return r.data||[];
-  }
-  window.cbtOpenReview=async function(o){
-    loading();
-    try{
-      var q=supabaseClient.from('quiz_attempts').select('*,students(name),quizzes(title,subjects(name))');
-      q=o.attemptId?q.eq('id',o.attemptId):q.eq('quiz_id',o.quizId).eq('student_id',o.studentId);
-      var r=await q.limit(1);
-      if(r.error)throw r.error;
-      var a=(r.data||[])[0];
-      if(!a){openModal('Review','<div class="cr-perfect" style="color:#777">No completed attempt found.</div>');return;}
-      var qs=await questionsOf(a.quiz_id);
-      var title=o.who==='teacher'?E((a.students&&a.students.name)||'Student')+' &ndash; '+E((a.quizzes&&a.quizzes.title)||'CBT'):'My corrections &ndash; '+E((a.quizzes&&a.quizzes.title)||'CBT');
-      var meta='<p style="margin:0 0 12px;color:#666;font-size:.88rem">Score: <b>'+Number(a.score||0).toFixed(1)+'</b> &bull; '+Number(a.percentage||0).toFixed(1)+'%'+((a.quizzes&&a.quizzes.subjects&&a.quizzes.subjects.name)?' &bull; '+E(a.quizzes.subjects.name):'')+'</p>';
-      openModal(title,meta+window.cbtReviewHtml(qs,a.answers||{},o.who));
-    }catch(e){openModal('Review','<div class="cr-perfect" style="color:#c41e3a">Could not load the review: '+E(e&&e.message||e)+'</div>');}
-  };
-  window.cbtOpenAnalysis=async function(quizId){
-    loading();
-    try{
-      var qs=await questionsOf(quizId);
-      var r=await supabaseClient.from('quiz_attempts').select('answers').eq('quiz_id',quizId);
-      if(r.error)throw r.error;
-      var att=r.data||[],n=att.length;
-      if(!n){openModal('Most-missed questions','<div class="cr-perfect" style="color:#777">No student has taken this CBT yet.</div>');return;}
-      var rows=qs.map(function(q){
-        var wrong=0,pick={};
-        att.forEach(function(a){var u=norm((a.answers||{})[q.id]);if(u!==norm(q.correct_answer)){wrong++;var k=u||'—';pick[k]=(pick[k]||0)+1;}});
-        var top=Object.keys(pick).sort(function(x,y){return pick[y]-pick[x];})[0];
-        return {q:q,wrong:wrong,pct:wrong/n*100,top:top,topN:top?pick[top]:0};
-      }).filter(function(x){return x.wrong>0;}).sort(function(a,b){return b.wrong-a.wrong;});
-      var h='<p style="margin:0 0 12px;color:#666;font-size:.88rem">Based on <b>'+n+'</b> student attempt'+(n===1?'':'s')+'. Questions are listed from most to least missed.</p>';
-      if(!rows.length)h+='<div class="cr-perfect"><i class="fas fa-check-circle"></i><h4 style="margin-top:8px">Every student answered every question correctly.</h4></div>';
-      h+=rows.map(function(x,i){
-        var q=x.q,ca=norm(q.correct_answer);
-        return '<div class="cr-q"><div class="qt">'+(i+1)+'. '+E(q.question_text||'')+'</div>'
-          +'<div style="font-size:.84rem;color:#9b1c1c;font-weight:700">'+x.wrong+' of '+n+' got it wrong ('+x.pct.toFixed(0)+'%)</div><div class="cr-bar"><i style="width:'+x.pct+'%"></i></div>'
-          +'<div class="cr-o ok"><b>'+E(ca)+'.</b> '+E(opt(q,ca))+'<span class="cr-tag">✓ Correct answer</span></div>'
-          +(x.top&&x.top!=='—'?'<div class="cr-top">Most common wrong choice: <b>'+E(x.top)+'. '+E(opt(q,x.top))+'</b> ('+x.topN+' student'+(x.topN===1?'':'s')+')</div>':'')+'</div>';
-      }).join('');
-      openModal('Most-missed questions',h);
-    }catch(e){openModal('Most-missed questions','<div class="cr-perfect" style="color:#c41e3a">Could not load: '+E(e&&e.message||e)+'</div>');}
-  };
-
-  /* Show the corrections straight after a student submits (weekly, exam and practice quizzes). */
-  function hook(){
-    var prev=window.submitStudentQuiz;if(typeof prev!=='function')return;
-    window.submitStudentQuiz=async function(){
-      var run=cbtRunner,qs=run&&run.questions,ans={};
-      if(qs)qs.forEach(function(q){var el=document.querySelector('input[name="q_'+q.id+'"]:checked');ans[q.id]=el?el.value:'';});
-      var res=await prev.apply(this,arguments);
-      try{
-        if(run&&!cbtRunner){
-          var box=document.getElementById('studentQuizResult');
-          if(box&&!box.classList.contains('hidden')){
-            var d=document.createElement('div');d.style.cssText='max-width:720px;margin:0 auto;padding:0 8px 20px;text-align:left';
-            d.innerHTML='<h3 style="color:#1a5f2a;margin:6px 0 12px"><i class="fas fa-search"></i> Your corrections</h3>'+window.cbtReviewHtml(qs,ans,'student');
-            box.appendChild(d);
-          }
-        }
-      }catch(e){console.warn('Corrections view failed',e);}
-      return res;
-    };
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();
-})();
-</script>
-
-<style id="ngis-back-online">
-.ngis-back-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;margin-right:14px;border:0;border-radius:12px;background:var(--primary,#1a5f2a);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;flex:0 0 auto;box-shadow:0 3px 10px rgba(0,0,0,.15)}
-.ngis-back-btn:active{transform:scale(.96)}
-.top-bar h2{margin-right:auto;min-width:0}
-@media(max-width:768px){.ngis-back-btn{min-height:42px;padding:0 12px;margin-right:10px}.ngis-back-btn span{display:none}.ngis-back-btn{width:42px;justify-content:center;padding:0}}
-#ngisOnPill{position:fixed;right:12px;bottom:12px;z-index:6000;display:none;align-items:center;gap:8px;padding:10px 16px;border:0;border-radius:26px;background:#16213e;color:#fff;font-weight:700;font-size:.85rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
-#ngisOnPill .d{width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 0 rgba(46,204,113,.7);animation:ngisPulse 2s infinite}
-@keyframes ngisPulse{70%{box-shadow:0 0 0 8px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
-#ngisOnOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:6500;display:none;align-items:center;justify-content:center;padding:14px}
-#ngisOnBox{background:#fff;border-radius:16px;width:min(640px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
-#ngisOnBox header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eee}
-#ngisOnBox header h3{margin:0;color:#1a5f2a;font-size:1.05rem}
-#ngisOnBox header button{border:0;background:#f1f1f1;border-radius:10px;width:38px;height:38px;font-size:1rem;cursor:pointer}
-#ngisOnBody{overflow-y:auto;padding:16px 20px 22px}
-.ngis-on-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-.ngis-on-sum div{background:#f0f9f2;border:1px solid #cfe8d5;border-radius:12px;padding:10px;text-align:center}
-.ngis-on-sum b{display:block;font-size:1.5rem;color:#1a5f2a}.ngis-on-sum span{font-size:.72rem;color:#555}
-.ngis-on-grp{margin-bottom:14px}.ngis-on-grp h4{margin:0 0 6px;font-size:.9rem;color:#16213e;display:flex;justify-content:space-between;border-bottom:2px solid #e8efe9;padding-bottom:4px}
-.ngis-on-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #f2f2f2;font-size:.86rem}
-.ngis-on-row .dot{width:9px;height:9px;border-radius:50%;background:#2ecc71;flex:0 0 auto}
-.ngis-on-row .nm{font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere}
-.ngis-on-row .meta{font-size:.74rem;color:#777;text-align:right}
-</style>
-
-<script id="ngis-back-online-js">
-(function(){
-  'use strict';
-  /* ================= BACK NAVIGATION (screen button + phone/browser back key) ================= */
-  var HOMES=['teacherDashboard','adminDashboard','studentDashboard','mgDashboard'];
-  var stack=[],restoring=false,baseSS=window.showSection;
-  function visibleSection(){var el=[].slice.call(document.querySelectorAll('.section')).filter(function(x){return !x.classList.contains('hidden');})[0];return el?el.id:null;}
-  function findNav(id){
-    var navs=['teacherNav','adminNav','studentNav','managementNav'];
-    for(var i=0;i<navs.length;i++){var n=document.getElementById(navs[i]);if(!n||n.classList.contains('hidden'))continue;
-      var el=n.querySelector('[onclick*="showSection(\''+id+'\'"],[data-mg="'+id+'"]');if(el)return el;}
-    return null;
-  }
-  function updateBtn(){
-    var b=document.getElementById('ngisBackBtn');if(!b)return;
-    var cur=visibleSection();
-    b.style.display=(currentUserOk()&&cur&&HOMES.indexOf(cur)<0)?'inline-flex':'none';
-  }
-  function currentUserOk(){try{return !!currentUser;}catch(e){return false;}}
-  window.showSection=function(id,nav){
-    var r=baseSS.apply(this,arguments);
-    var done=function(){
-      var cur=visibleSection();
-      if(!restoring&&cur&&stack[stack.length-1]!==cur){
-        stack.push(cur);
-        try{history.pushState({ngis:1,sec:cur},'');}catch(e){}
-      }
-      updateBtn();
-    };
-    if(r&&typeof r.then==='function')return r.then(function(v){done();return v;});
-    done();return r;
-  };
-  function closeOpenModal(){
-    var ov=document.getElementById('modalOverlay');
-    if(ov&&!ov.classList.contains('hidden')){document.querySelectorAll('.modal').forEach(function(m){m.classList.add('hidden');});ov.classList.add('hidden');return true;}
-    var on=document.getElementById('ngisOnOverlay');
-    if(on&&on.style.display==='flex'){on.style.display='none';return true;}
-    return false;
-  }
-  function goTo(id){
-    restoring=true;
-    try{var r=window.showSection(id,findNav(id));if(r&&r.then)r.then(function(){restoring=false;updateBtn();},function(){restoring=false;});else restoring=false;}
-    catch(e){restoring=false;}
-    updateBtn();
-  }
-  window.ngisGoBack=function(){
-    if(closeOpenModal())return;
-    var cm=document.getElementById('sidebar');if(window.innerWidth<=1024&&cm&&cm.classList.contains('open')){closeMobileSidebar();return;}
-    if(stack.length>1){history.back();}
-    else{var home=HOMES.filter(function(h){return document.getElementById(h)&&findNav(h);})[0];if(home){stack=[home];goTo(home);}}
-  };
-  window.addEventListener('popstate',function(e){
-    if(!currentUserOk())return;
-    if(closeOpenModal()){try{history.pushState({ngis:1,sec:visibleSection()},'');}catch(x){}return;}
-    if(stack.length>1){stack.pop();goTo(stack[stack.length-1]);}
-    else{try{history.pushState({ngis:1,sec:visibleSection()},'');}catch(x){}}   // at home: stay in the app, do not exit by accident
-  });
-  function resetNav(){stack=[];updateBtn();}
-  /* start a fresh history after every login, clear it on logout */
-  var _sd=window.setupDashboard;
-  window.setupDashboard=async function(){
-    var r=await _sd.apply(this,arguments);
-    var cur=visibleSection();stack=cur?[cur]:[];
-    try{history.replaceState({ngis:1,sec:'guard'},'');history.pushState({ngis:1,sec:cur},'');}catch(e){}
-    updateBtn();presenceStart();return r;
-  };
-  var _lo=window.logout;
-  window.logout=function(){presenceStop();resetNav();return _lo.apply(this,arguments);};
-
-  /* ================= LIVE "WHO IS ONLINE" (Supabase Realtime Presence – no database table needed) ================= */
-  var ch=null,tabKey=Math.random().toString(36).slice(2,10),lastPage='',people=[];
-  var SECN={nursery:'Nursery',primary:'Primary',junior_secondary:'Junior Secondary',senior_secondary:'Senior Secondary'};
-  function profile(){
-    var u=currentUser||{},role=u.role==='admin'?'admin':u.role==='management'?'management':u.role==='student'?'student':'teacher';
-    var secs=[];
-    if(role==='teacher'){secs=(Array.isArray(u.school_sections)?u.school_sections:[]).map(function(k){return SECN[k]||k;});if(!secs.length)secs=['No section set'];}
-    else if(role==='admin')secs=['Administration'];
-    else if(role==='management')secs=['Management'];
-    else secs=['Students'];
-    var title=document.getElementById('pageTitle');
-    return {uid:role+':'+(u.id||u.student_login_id||u.email||'x'),role:role,name:role==='student'?'Student':(u.name||'Staff'),
-      position:role==='management'?(u.position||'Management'):role==='admin'?'Administrator':role==='teacher'?'Teacher':'Student',
-      sections:secs,page:title?title.textContent.trim():'',since:window._ngisOnSince||(window._ngisOnSince=new Date().toISOString())};
-  }
-  function track(){if(!ch)return;try{ch.track(profile());}catch(e){}}
-  function presenceStart(){
-    if(ch||!currentUserOk()||typeof supabaseClient==='undefined')return;
-    window._ngisOnSince=new Date().toISOString();
-    try{
-      ch=supabaseClient.channel('ngis-live-users',{config:{presence:{key:tabKey}}});
-      ch.on('presence',{event:'sync'},function(){collect();});
-      ch.subscribe(function(st){if(st==='SUBSCRIBED')track();});
-    }catch(e){console.warn('Presence unavailable',e);ch=null;}
-    pillShow();
-  }
-  function presenceStop(){
-    if(ch){try{ch.untrack();supabaseClient.removeChannel(ch);}catch(e){}ch=null;}
-    people=[];var p=document.getElementById('ngisOnPill');if(p)p.style.display='none';
-  }
-  function collect(){
-    var st=ch?ch.presenceState():{},byUid={},students=0,seenStud={};
-    Object.keys(st).forEach(function(k){(st[k]||[]).forEach(function(m){
-      if(m.role==='student'){if(!seenStud[k]){seenStud[k]=1;students++;}return;}   // students are counted, never named
-      var prev=byUid[m.uid];if(!prev||m.since>prev.since)byUid[m.uid]=m;
-    });});
-    people=Object.keys(byUid).map(function(k){return byUid[k];});
-    people.students=students;
-    var n=people.length;
-    var pc=document.getElementById('ngisOnCount');if(pc)pc.textContent=n;
-    var sc=document.getElementById('adminStatOnline');if(sc)sc.textContent=n;
-    if(document.getElementById('ngisOnOverlay').style.display==='flex')render();
-  }
-  function isViewer(){return currentUser&&(currentUser.role==='admin'||currentUser.role==='management');}
-  function pillShow(){
-    var pill=document.getElementById('ngisOnPill');
-    if(!pill){
-      pill=document.createElement('button');pill.id='ngisOnPill';pill.type='button';
-      pill.innerHTML='<span class="d"></span><span><b id="ngisOnCount">0</b> online</span>';
-      pill.onclick=function(){window.ngisOpenOnline();};document.body.appendChild(pill);
-      var ov=document.createElement('div');ov.id='ngisOnOverlay';
-      ov.innerHTML='<div id="ngisOnBox"><header><h3><i class="fas fa-circle" style="color:#2ecc71;font-size:.7rem"></i> Who is online right now</h3><button type="button" aria-label="Close" onclick="document.getElementById(\'ngisOnOverlay\').style.display=\'none\'">&times;</button></header><div id="ngisOnBody"></div></div>';
-      ov.addEventListener('click',function(e){if(e.target===ov)ov.style.display='none';});
-      document.body.appendChild(ov);
-    }
-    pill.style.display=isViewer()?'inline-flex':'none';
-  }
-  function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function ago(iso){var m=Math.max(0,Math.round((Date.now()-new Date(iso).getTime())/60000));return m<1?'just now':m<60?m+' min':Math.floor(m/60)+'h '+(m%60)+'m';}
-  function render(){
-    var body=document.getElementById('ngisOnBody');if(!body)return;
-    var groups={};
-    people.forEach(function(m){(m.sections||['Other']).forEach(function(sec){(groups[sec]=groups[sec]||[]).push(m);});});
-    var order=['Administration','Management','Nursery','Primary','Junior Secondary','Senior Secondary','No section set'];
-    var keys=Object.keys(groups).sort(function(a,b){var x=order.indexOf(a),y=order.indexOf(b);return (x<0?99:x)-(y<0?99:y)||a.localeCompare(b);});
-    var teachers=people.filter(function(m){return m.role==='teacher';}).length;
-    var html='<div class="ngis-on-sum"><div><b>'+people.length+'</b><span>Staff online</span></div><div><b>'+teachers+'</b><span>Teachers</span></div><div><b>'+(people.students||0)+'</b><span>Students online</span></div></div>';
-    if(!people.length)html+='<p style="text-align:center;color:#777;padding:20px 0">No other staff are online at the moment.</p>';
-    keys.forEach(function(k){
-      var list=groups[k].slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
-      html+='<div class="ngis-on-grp"><h4><span>'+esc(k)+'</span><span>'+list.length+'</span></h4>'+list.map(function(m){
-        return '<div class="ngis-on-row"><span class="dot"></span><span class="nm">'+esc(m.name)+'<br><small style="font-weight:400;color:#777">'+esc(m.position)+(m.sections&&m.sections.length>1?' · '+esc(m.sections.join(', ')):'')+'</small></span><span class="meta">'+esc(m.page)+'<br>online '+ago(m.since)+'</span></div>';}).join('')+'</div>';
-    });
-    html+='<p style="font-size:.74rem;color:#888;margin-top:6px">Live view: a person appears while the app is open on their phone or PC and disappears when they close it or log out. A teacher in two sections is listed under both but counted once.</p>';
-    body.innerHTML=html;
-  }
-  window.ngisOpenOnline=function(){pillShow();collect();render();document.getElementById('ngisOnOverlay').style.display='flex';};
-
-  /* keep each person's "current page" up to date, and refresh time-online labels */
-  var _ss2=window.showSection;
-  window.showSection=function(){var r=_ss2.apply(this,arguments);setTimeout(function(){var t=document.getElementById('pageTitle');var cur=t?t.textContent.trim():'';if(cur!==lastPage){lastPage=cur;track();}},50);return r;};
-  setInterval(function(){if(document.getElementById('ngisOnOverlay')&&document.getElementById('ngisOnOverlay').style.display==='flex')render();},30000);
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)track();});
-  window.addEventListener('pagehide',function(){try{if(ch)ch.untrack();}catch(e){}});
-})();
-</script>
 </body>
 </html>
