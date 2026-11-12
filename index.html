@@ -1172,6 +1172,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 
 <div class="main-content">
 <div class="top-bar">
+<button type="button" id="ngisBackBtn" class="ngis-back-btn" aria-label="Go back" onclick="ngisGoBack()" style="display:none"><i class="fas fa-arrow-left"></i><span>Back</span></button>
 <h2 id="pageTitle"><i class="fas fa-home"></i> Dashboard</h2>
 <div class="user-info">
 <div class="user-avatar" id="userAvatar">T</div>
@@ -2210,6 +2211,7 @@ Only the class teacher assigned to this class can save the comment.
 </div>
 </div>
 <div class="stats-grid">
+<div class="stat-card" style="cursor:pointer" onclick="ngisOpenOnline()" title="See who is online"><div class="stat-icon green"><i class="fas fa-circle"></i></div><div class="stat-info"><h4 id="adminStatOnline">0</h4><p>Staff Online Now (tap to view)</p></div></div>
 <div class="stat-card"><div class="stat-icon green"><i class="fas fa-school"></i></div><div class="stat-info"><h4 id="adminStatClasses">0</h4><p>Total Classes</p></div></div>
 <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-user-graduate"></i></div><div class="stat-info"><h4 id="adminStatStudents">0</h4><p>Total Students</p></div></div>
 <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-chalkboard-teacher"></i></div><div class="stat-info"><h4 id="adminStatTeachers">0</h4><p>Total Teachers</p></div></div>
@@ -14653,6 +14655,186 @@ window.showSection=function(id,nav){_sx(id,nav);if(id==='caRecord'){const pt=$('
     };
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hook);else hook();
+})();
+</script>
+
+<style id="ngis-back-online">
+.ngis-back-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;margin-right:14px;border:0;border-radius:12px;background:var(--primary,#1a5f2a);color:#fff;font-weight:700;font-size:.9rem;cursor:pointer;flex:0 0 auto;box-shadow:0 3px 10px rgba(0,0,0,.15)}
+.ngis-back-btn:active{transform:scale(.96)}
+.top-bar h2{margin-right:auto;min-width:0}
+@media(max-width:768px){.ngis-back-btn{min-height:42px;padding:0 12px;margin-right:10px}.ngis-back-btn span{display:none}.ngis-back-btn{width:42px;justify-content:center;padding:0}}
+#ngisOnPill{position:fixed;right:12px;bottom:12px;z-index:6000;display:none;align-items:center;gap:8px;padding:10px 16px;border:0;border-radius:26px;background:#16213e;color:#fff;font-weight:700;font-size:.85rem;box-shadow:0 6px 20px rgba(0,0,0,.35);cursor:pointer}
+#ngisOnPill .d{width:10px;height:10px;border-radius:50%;background:#2ecc71;box-shadow:0 0 0 0 rgba(46,204,113,.7);animation:ngisPulse 2s infinite}
+@keyframes ngisPulse{70%{box-shadow:0 0 0 8px rgba(46,204,113,0)}100%{box-shadow:0 0 0 0 rgba(46,204,113,0)}}
+#ngisOnOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:6500;display:none;align-items:center;justify-content:center;padding:14px}
+#ngisOnBox{background:#fff;border-radius:16px;width:min(640px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+#ngisOnBox header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #eee}
+#ngisOnBox header h3{margin:0;color:#1a5f2a;font-size:1.05rem}
+#ngisOnBox header button{border:0;background:#f1f1f1;border-radius:10px;width:38px;height:38px;font-size:1rem;cursor:pointer}
+#ngisOnBody{overflow-y:auto;padding:16px 20px 22px}
+.ngis-on-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.ngis-on-sum div{background:#f0f9f2;border:1px solid #cfe8d5;border-radius:12px;padding:10px;text-align:center}
+.ngis-on-sum b{display:block;font-size:1.5rem;color:#1a5f2a}.ngis-on-sum span{font-size:.72rem;color:#555}
+.ngis-on-grp{margin-bottom:14px}.ngis-on-grp h4{margin:0 0 6px;font-size:.9rem;color:#16213e;display:flex;justify-content:space-between;border-bottom:2px solid #e8efe9;padding-bottom:4px}
+.ngis-on-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #f2f2f2;font-size:.86rem}
+.ngis-on-row .dot{width:9px;height:9px;border-radius:50%;background:#2ecc71;flex:0 0 auto}
+.ngis-on-row .nm{font-weight:600;flex:1;min-width:0;overflow-wrap:anywhere}
+.ngis-on-row .meta{font-size:.74rem;color:#777;text-align:right}
+</style>
+
+<script id="ngis-back-online-js">
+(function(){
+  'use strict';
+  /* ================= BACK NAVIGATION (screen button + phone/browser back key) ================= */
+  var HOMES=['teacherDashboard','adminDashboard','studentDashboard','mgDashboard'];
+  var stack=[],restoring=false,baseSS=window.showSection;
+  function visibleSection(){var el=[].slice.call(document.querySelectorAll('.section')).filter(function(x){return !x.classList.contains('hidden');})[0];return el?el.id:null;}
+  function findNav(id){
+    var navs=['teacherNav','adminNav','studentNav','managementNav'];
+    for(var i=0;i<navs.length;i++){var n=document.getElementById(navs[i]);if(!n||n.classList.contains('hidden'))continue;
+      var el=n.querySelector('[onclick*="showSection(\''+id+'\'"],[data-mg="'+id+'"]');if(el)return el;}
+    return null;
+  }
+  function updateBtn(){
+    var b=document.getElementById('ngisBackBtn');if(!b)return;
+    var cur=visibleSection();
+    b.style.display=(currentUserOk()&&cur&&HOMES.indexOf(cur)<0)?'inline-flex':'none';
+  }
+  function currentUserOk(){try{return !!currentUser;}catch(e){return false;}}
+  window.showSection=function(id,nav){
+    var r=baseSS.apply(this,arguments);
+    var done=function(){
+      var cur=visibleSection();
+      if(!restoring&&cur&&stack[stack.length-1]!==cur){
+        stack.push(cur);
+        try{history.pushState({ngis:1,sec:cur},'');}catch(e){}
+      }
+      updateBtn();
+    };
+    if(r&&typeof r.then==='function')return r.then(function(v){done();return v;});
+    done();return r;
+  };
+  function closeOpenModal(){
+    var ov=document.getElementById('modalOverlay');
+    if(ov&&!ov.classList.contains('hidden')){document.querySelectorAll('.modal').forEach(function(m){m.classList.add('hidden');});ov.classList.add('hidden');return true;}
+    var on=document.getElementById('ngisOnOverlay');
+    if(on&&on.style.display==='flex'){on.style.display='none';return true;}
+    return false;
+  }
+  function goTo(id){
+    restoring=true;
+    try{var r=window.showSection(id,findNav(id));if(r&&r.then)r.then(function(){restoring=false;updateBtn();},function(){restoring=false;});else restoring=false;}
+    catch(e){restoring=false;}
+    updateBtn();
+  }
+  window.ngisGoBack=function(){
+    if(closeOpenModal())return;
+    var cm=document.getElementById('sidebar');if(window.innerWidth<=1024&&cm&&cm.classList.contains('open')){closeMobileSidebar();return;}
+    if(stack.length>1){history.back();}
+    else{var home=HOMES.filter(function(h){return document.getElementById(h)&&findNav(h);})[0];if(home){stack=[home];goTo(home);}}
+  };
+  window.addEventListener('popstate',function(e){
+    if(!currentUserOk())return;
+    if(closeOpenModal()){try{history.pushState({ngis:1,sec:visibleSection()},'');}catch(x){}return;}
+    if(stack.length>1){stack.pop();goTo(stack[stack.length-1]);}
+    else{try{history.pushState({ngis:1,sec:visibleSection()},'');}catch(x){}}   // at home: stay in the app, do not exit by accident
+  });
+  function resetNav(){stack=[];updateBtn();}
+  /* start a fresh history after every login, clear it on logout */
+  var _sd=window.setupDashboard;
+  window.setupDashboard=async function(){
+    var r=await _sd.apply(this,arguments);
+    var cur=visibleSection();stack=cur?[cur]:[];
+    try{history.replaceState({ngis:1,sec:'guard'},'');history.pushState({ngis:1,sec:cur},'');}catch(e){}
+    updateBtn();presenceStart();return r;
+  };
+  var _lo=window.logout;
+  window.logout=function(){presenceStop();resetNav();return _lo.apply(this,arguments);};
+
+  /* ================= LIVE "WHO IS ONLINE" (Supabase Realtime Presence – no database table needed) ================= */
+  var ch=null,tabKey=Math.random().toString(36).slice(2,10),lastPage='',people=[];
+  var SECN={nursery:'Nursery',primary:'Primary',junior_secondary:'Junior Secondary',senior_secondary:'Senior Secondary'};
+  function profile(){
+    var u=currentUser||{},role=u.role==='admin'?'admin':u.role==='management'?'management':u.role==='student'?'student':'teacher';
+    var secs=[];
+    if(role==='teacher'){secs=(Array.isArray(u.school_sections)?u.school_sections:[]).map(function(k){return SECN[k]||k;});if(!secs.length)secs=['No section set'];}
+    else if(role==='admin')secs=['Administration'];
+    else if(role==='management')secs=['Management'];
+    else secs=['Students'];
+    var title=document.getElementById('pageTitle');
+    return {uid:role+':'+(u.id||u.student_login_id||u.email||'x'),role:role,name:role==='student'?'Student':(u.name||'Staff'),
+      position:role==='management'?(u.position||'Management'):role==='admin'?'Administrator':role==='teacher'?'Teacher':'Student',
+      sections:secs,page:title?title.textContent.trim():'',since:window._ngisOnSince||(window._ngisOnSince=new Date().toISOString())};
+  }
+  function track(){if(!ch)return;try{ch.track(profile());}catch(e){}}
+  function presenceStart(){
+    if(ch||!currentUserOk()||typeof supabaseClient==='undefined')return;
+    window._ngisOnSince=new Date().toISOString();
+    try{
+      ch=supabaseClient.channel('ngis-live-users',{config:{presence:{key:tabKey}}});
+      ch.on('presence',{event:'sync'},function(){collect();});
+      ch.subscribe(function(st){if(st==='SUBSCRIBED')track();});
+    }catch(e){console.warn('Presence unavailable',e);ch=null;}
+    pillShow();
+  }
+  function presenceStop(){
+    if(ch){try{ch.untrack();supabaseClient.removeChannel(ch);}catch(e){}ch=null;}
+    people=[];var p=document.getElementById('ngisOnPill');if(p)p.style.display='none';
+  }
+  function collect(){
+    var st=ch?ch.presenceState():{},byUid={},students=0,seenStud={};
+    Object.keys(st).forEach(function(k){(st[k]||[]).forEach(function(m){
+      if(m.role==='student'){if(!seenStud[k]){seenStud[k]=1;students++;}return;}   // students are counted, never named
+      var prev=byUid[m.uid];if(!prev||m.since>prev.since)byUid[m.uid]=m;
+    });});
+    people=Object.keys(byUid).map(function(k){return byUid[k];});
+    people.students=students;
+    var n=people.length;
+    var pc=document.getElementById('ngisOnCount');if(pc)pc.textContent=n;
+    var sc=document.getElementById('adminStatOnline');if(sc)sc.textContent=n;
+    if(document.getElementById('ngisOnOverlay').style.display==='flex')render();
+  }
+  function isViewer(){return currentUser&&(currentUser.role==='admin'||currentUser.role==='management');}
+  function pillShow(){
+    var pill=document.getElementById('ngisOnPill');
+    if(!pill){
+      pill=document.createElement('button');pill.id='ngisOnPill';pill.type='button';
+      pill.innerHTML='<span class="d"></span><span><b id="ngisOnCount">0</b> online</span>';
+      pill.onclick=function(){window.ngisOpenOnline();};document.body.appendChild(pill);
+      var ov=document.createElement('div');ov.id='ngisOnOverlay';
+      ov.innerHTML='<div id="ngisOnBox"><header><h3><i class="fas fa-circle" style="color:#2ecc71;font-size:.7rem"></i> Who is online right now</h3><button type="button" aria-label="Close" onclick="document.getElementById(\'ngisOnOverlay\').style.display=\'none\'">&times;</button></header><div id="ngisOnBody"></div></div>';
+      ov.addEventListener('click',function(e){if(e.target===ov)ov.style.display='none';});
+      document.body.appendChild(ov);
+    }
+    pill.style.display=isViewer()?'inline-flex':'none';
+  }
+  function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function ago(iso){var m=Math.max(0,Math.round((Date.now()-new Date(iso).getTime())/60000));return m<1?'just now':m<60?m+' min':Math.floor(m/60)+'h '+(m%60)+'m';}
+  function render(){
+    var body=document.getElementById('ngisOnBody');if(!body)return;
+    var groups={};
+    people.forEach(function(m){(m.sections||['Other']).forEach(function(sec){(groups[sec]=groups[sec]||[]).push(m);});});
+    var order=['Administration','Management','Nursery','Primary','Junior Secondary','Senior Secondary','No section set'];
+    var keys=Object.keys(groups).sort(function(a,b){var x=order.indexOf(a),y=order.indexOf(b);return (x<0?99:x)-(y<0?99:y)||a.localeCompare(b);});
+    var teachers=people.filter(function(m){return m.role==='teacher';}).length;
+    var html='<div class="ngis-on-sum"><div><b>'+people.length+'</b><span>Staff online</span></div><div><b>'+teachers+'</b><span>Teachers</span></div><div><b>'+(people.students||0)+'</b><span>Students online</span></div></div>';
+    if(!people.length)html+='<p style="text-align:center;color:#777;padding:20px 0">No other staff are online at the moment.</p>';
+    keys.forEach(function(k){
+      var list=groups[k].slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+      html+='<div class="ngis-on-grp"><h4><span>'+esc(k)+'</span><span>'+list.length+'</span></h4>'+list.map(function(m){
+        return '<div class="ngis-on-row"><span class="dot"></span><span class="nm">'+esc(m.name)+'<br><small style="font-weight:400;color:#777">'+esc(m.position)+(m.sections&&m.sections.length>1?' · '+esc(m.sections.join(', ')):'')+'</small></span><span class="meta">'+esc(m.page)+'<br>online '+ago(m.since)+'</span></div>';}).join('')+'</div>';
+    });
+    html+='<p style="font-size:.74rem;color:#888;margin-top:6px">Live view: a person appears while the app is open on their phone or PC and disappears when they close it or log out. A teacher in two sections is listed under both but counted once.</p>';
+    body.innerHTML=html;
+  }
+  window.ngisOpenOnline=function(){pillShow();collect();render();document.getElementById('ngisOnOverlay').style.display='flex';};
+
+  /* keep each person's "current page" up to date, and refresh time-online labels */
+  var _ss2=window.showSection;
+  window.showSection=function(){var r=_ss2.apply(this,arguments);setTimeout(function(){var t=document.getElementById('pageTitle');var cur=t?t.textContent.trim():'';if(cur!==lastPage){lastPage=cur;track();}},50);return r;};
+  setInterval(function(){if(document.getElementById('ngisOnOverlay')&&document.getElementById('ngisOnOverlay').style.display==='flex')render();},30000);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)track();});
+  window.addEventListener('pagehide',function(){try{if(ch)ch.untrack();}catch(e){}});
 })();
 </script>
 </body>
