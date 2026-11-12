@@ -2313,7 +2313,7 @@ Only the class teacher assigned to this class can save the comment.
 
 <div id="subjectsMgmt" class="section hidden">
 <div class="card">
-<div class="card-header"><h3><i class="fas fa-book"></i> Subject Management</h3><button class="btn btn-primary btn-sm" onclick="openModal('subjectModal')"><i class="fas fa-plus"></i> Add Subject</button></div>
+<div class="card-header"><h3><i class="fas fa-book"></i> Subject Management</h3><button class="btn btn-primary btn-sm" onclick="ngisSubjNew()"><i class="fas fa-plus"></i> Add Subject</button></div>
 <div id="subjSetup"></div>
 <div class="ts-btnrow" id="subjBar" style="align-items:center"><button class="btn btn-primary btn-sm" onclick="ngisSubjAssignSelected()"><i class="fas fa-sitemap"></i> Assign Selected to Sections / Classes</button><label style="font-size:.85rem;display:flex;gap:6px;align-items:center">Show <select id="subjFilter" onchange="renderSubjectsTable()" style="padding:6px;border-radius:6px;border:1px solid #ccc"><option value="">All subjects</option><option value="nursery">Nursery</option><option value="primary">Primary</option><option value="secondary">Secondary</option><option value="none">Not assigned</option></select></label></div>
 <div class="table-container"><table><thead><tr><th style="width:34px"><input type="checkbox" id="subjSelAll" onchange="ngisSubjSelAll(this.checked)"></th><th>Subject Name</th><th>Section(s)</th><th>Classes</th><th>Actions</th></tr></thead><tbody id="subjectsTable"></tbody></table></div>
@@ -2574,9 +2574,10 @@ Only the class teacher assigned to this class can save the comment.
 <div class="form-group"><label>End Date</label><input type="date" id="weekEndInput"></div>
 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('weekModal')">Cancel</button><button class="btn btn-primary" onclick="saveWeek()">Save Week</button></div>
 </div>
-<div class="modal hidden" id="subjectModal">
+<div class="modal hidden" id="subjectModal" style="max-width:640px">
 <h3><i class="fas fa-book"></i> Add New Subject</h3>
 <div class="form-group"><label>Subject Name</label><input type="text" id="subjectNameInput" placeholder="e.g. Mathematics, English Language"></div>
+<div id="newSubjPicker"></div>
 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('subjectModal')">Cancel</button><button class="btn btn-primary" onclick="saveSubject()">Save Subject</button></div>
 </div>
 <div class="modal hidden" id="studentModal">
@@ -14998,5 +14999,97 @@ window.showSection=function(id,nav){_sx(id,nav);if(id==='caRecord'){const pt=$('
  .sa-t tr{border:1px solid #e3e3e3;border-radius:12px;margin-bottom:10px;padding:8px 10px}.sa-t td{border:0;padding:3px 0;display:flex;justify-content:space-between;gap:10px;text-align:right}
  .sa-t td::before{content:attr(data-l);font-weight:600;color:#1a5f2a;text-align:left}.sa-t td:first-child{display:block;text-align:left;font-size:1rem}.sa-t td:first-child::before{content:none}}
 </style>
+
+<script>
+/* ===== ADD SUBJECT: choose section(s), class(es) and teacher(s) in one step ===== */
+(function(){
+'use strict';
+var SECS={nursery:'Nursery',primary:'Primary',secondary:'Secondary'},COL={nursery:'#e67e22',primary:'#1565c0',secondary:'#1a5f2a'};
+var $=function(id){return document.getElementById(id);},E=function(v){return escapeHtml(v);};
+function secOf(c){try{return ngisSectionOfClass(c.name)||'other';}catch(_){return 'other';}}
+function tsecs(t){return (Array.isArray(t.school_sections)?t.school_sections:[]).map(function(k){return /secondary/.test(k)?'secondary':k;});}
+function chosen(){
+  var classIds=[].slice.call(document.querySelectorAll('.as-cls:checked')).map(function(c){return c.value;});
+  var secs={};[].slice.call(document.querySelectorAll('.as-sec:checked')).forEach(function(c){secs[c.dataset.k]=1;});
+  classIds.forEach(function(id){var c=(classes||[]).find(function(x){return String(x.id)===id;});var k=c?secOf(c):'';if(SECS[k])secs[k]=1;});
+  return {classIds:classIds,secs:secs};
+}
+function renderTeachers(){
+  var box=$('asTch');if(!box)return;
+  var keep={};[].slice.call(document.querySelectorAll('.as-tch:checked')).forEach(function(c){keep[c.dataset.c+'|'+c.value]=1;});
+  var ch=chosen();
+  var cls=ch.classIds.map(function(id){return (classes||[]).find(function(x){return String(x.id)===id;});}).filter(Boolean);
+  if(!cls.length){box.innerHTML='<span style="color:#888;font-size:.84rem">Tick one or more classes above, then choose the teacher(s) for each class here.</span>';return;}
+  box.innerHTML=cls.map(function(c,i){
+    var k=secOf(c);
+    var list=(teachers||[]).filter(function(t){var ts=tsecs(t);return !ts.length||!SECS[k]||ts.indexOf(k)>-1;})
+      .sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+    var cid=String(c.id);
+    return '<div style="border:1px solid #e3e9e5;border-radius:10px;padding:8px 12px;margin-bottom:8px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="color:'+(COL[k]||'#555')+'">'+E(c.name)+'</b>'+
+      (cls.length>1&&i===0?'<a href="#" onclick="ngisNTchAll(\''+E(cid)+'\');return false" style="font-size:.78rem;color:#1565c0">Use these teachers for all classes</a>':'')+'</div>'+
+      '<div style="display:flex;gap:4px 16px;flex-wrap:wrap;margin-top:6px">'+(list.length?list.map(function(t){
+        return '<label style="display:flex;gap:5px;align-items:center;font-size:.86rem"><input type="checkbox" class="as-tch" data-c="'+E(cid)+'" value="'+E(t.id)+'"'+(keep[cid+'|'+String(t.id)]?' checked':'')+' style="width:auto"> '+E(t.name)+'</label>';
+      }).join(''):'<span style="color:#888;font-size:.82rem">No teachers registered for this section yet</span>')+'</div></div>';
+  }).join('');
+}
+window.ngisNTchAll=function(fromId){
+  var on={};[].slice.call(document.querySelectorAll('.as-tch[data-c="'+fromId+'"]:checked')).forEach(function(c){on[c.value]=1;});
+  [].slice.call(document.querySelectorAll('.as-tch')).forEach(function(c){c.checked=!!on[c.value];});
+};
+window.ngisSubjNew=function(){
+  if(currentUser&&currentUser.role!=='admin'){showToast('Only administrators can add subjects.','error');return;}
+  var inp=$('subjectNameInput');if(inp)inp.value='';
+  $('newSubjPicker').innerHTML='<div style="font-weight:700;margin:6px 0 8px;color:#1a5f2a">1. Which section / classes will offer it?</div>'+
+  ['nursery','primary','secondary','other'].map(function(k){
+    var list=(classes||[]).filter(function(c){return secOf(c)===k;});
+    if(!list.length&&k==='other')return '';
+    return '<div style="border:1px solid #e3e9e5;border-radius:10px;padding:10px 12px;margin-bottom:8px"><label style="font-weight:800;display:flex;gap:8px;align-items:center;color:'+(COL[k]||'#555')+'">'+
+    (k==='other'?'':'<input type="checkbox" class="as-sec" data-k="'+k+'" onchange="ngisNSecTog(this)" style="width:auto">')+' '+(SECS[k]||'Other classes')+(k==='other'?'':' (whole section)')+'</label>'+
+    '<div style="display:flex;gap:6px 16px;flex-wrap:wrap;margin-top:8px">'+(list.length?list.map(function(c){return '<label style="display:flex;gap:5px;align-items:center;font-size:.86rem"><input type="checkbox" class="as-cls" data-k="'+k+'" value="'+E(c.id)+'" onchange="ngisNClsTog(\''+k+'\')" style="width:auto"> '+E(c.name)+'</label>';}).join(''):'<span style="color:#888;font-size:.82rem">No classes in this section yet</span>')+'</div></div>';
+  }).join('')+
+  '<div style="font-weight:700;margin:14px 0 4px;color:#1a5f2a">2. Which teacher(s) will teach it in each class? <small style="font-weight:400;color:#777">(optional – you can leave a class without a teacher and assign later)</small></div><div id="asTch"></div>';
+  renderTeachers();openModal('subjectModal');
+};
+window.ngisNSecTog=function(el){document.querySelectorAll('.as-cls[data-k="'+el.dataset.k+'"]').forEach(function(c){c.checked=el.checked;});renderTeachers();};
+window.ngisNClsTog=function(k){var cls=[].slice.call(document.querySelectorAll('.as-cls[data-k="'+k+'"]')),h=document.querySelector('.as-sec[data-k="'+k+'"]');if(h&&cls.length)h.checked=cls.every(function(c){return c.checked;});renderTeachers();};
+
+window.saveSubject=async function(){
+  if(!currentUser||currentUser.role!=='admin'){showToast('Only administrators can add subjects.','error');return;}
+  var input=$('subjectNameInput'),name=(input&&input.value||'').trim();
+  if(!name){showToast('Enter a subject name.','error');if(input)input.focus();return;}
+  if((subjects||[]).some(function(s){return String(s.name||'').trim().toLowerCase()===name.toLowerCase();})){showToast('This subject already exists.','error');return;}
+  var ch=chosen(),sections=Object.keys(SECS).filter(function(k){return ch.secs[k];});
+  var pairs=[],seenT={},tIds=[];
+  [].slice.call(document.querySelectorAll('.as-tch:checked')).forEach(function(c){
+    var t=(teachers||[]).find(function(x){return String(x.id)===c.value;}),cl=(classes||[]).find(function(x){return String(x.id)===c.dataset.c;});
+    var tid=t?t.id:c.value,cid=cl?cl.id:c.dataset.c;
+    pairs.push({teacher_id:tid,class_id:cid});
+    if(!seenT[String(tid)]){seenT[String(tid)]=1;tIds.push(tid);}
+  });
+  var cIds=ch.classIds.map(function(id){var c=(classes||[]).find(function(x){return String(x.id)===id;});return c?c.id:id;});
+  var r=await supabaseClient.from('subjects').insert([{name:name}]).select().single();
+  if(r.error||!r.data||!r.data.id){showToast('Error adding subject: '+(r.error?r.error.message:'check INSERT policy on subjects'),'error');return;}
+  var sid=r.data.id,notes=[];
+  if(sections.length||cIds.length){
+    var u=await supabaseClient.from('subjects').update({sections:sections,class_ids:cIds.map(String)}).eq('id',sid);
+    if(u.error)notes.push('Sections/classes not saved – run the one-time SQL shown on the Subjects page, then use Assign.');
+  }
+  if(tIds.length){
+    var t1=await supabaseClient.from('teacher_subjects').insert(tIds.map(function(id){return {teacher_id:id,subject_id:sid};}));
+    if(t1.error)notes.push('Teachers not linked: '+t1.error.message);
+    else if(pairs.length){
+      var have={};(classTeachers||[]).forEach(function(x){have[String(x.teacher_id)+'|'+String(x.class_id)]=1;});
+      var add=pairs.filter(function(x){return !have[String(x.teacher_id)+'|'+String(x.class_id)];});
+      if(add.length){var t2=await supabaseClient.from('class_teachers').insert(add);if(t2.error)notes.push('Teacher–class links not saved: '+t2.error.message);}
+    }
+  }
+  if(input)input.value='';closeModal('subjectModal');
+  await loadSubjects();
+  try{await loadTeachers();}catch(e){}try{await loadClassTeachers();}catch(e){}
+  showToast(notes.length?('Subject added. '+notes.join(' ')):('Subject added'+(sections.length?' to '+sections.map(function(k){return SECS[k];}).join(' & '):'')+(tIds.length?' with '+tIds.length+' teacher'+(tIds.length>1?'s':''):'')),notes.length?'error':'success');
+};
+})();
+</script>
 </body>
 </html>
