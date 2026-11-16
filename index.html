@@ -2358,7 +2358,7 @@ Only the class teacher assigned to this class can save the comment.
 <div class="card">
 <div class="card-header"><h3><i class="fas fa-chalkboard-teacher"></i> Teacher Management</h3><button class="btn btn-primary btn-sm" onclick="openModal('teacherModal')"><i class="fas fa-plus"></i> Add Teacher</button></div>
 <div class="form-group" style="max-width:420px;margin-bottom:14px"><label><i class="fas fa-search"></i> Search Teacher</label><div class="ngis-search"><input type="search" id="teacherSearch" oninput="renderTeachersTable()" placeholder="Name, email, subject or class…" autocomplete="off"><button type="button" class="ngis-search-x" onclick="ngisClearSearch('teacherSearch',renderTeachersTable)" title="Clear">&times;</button></div><div class="ngis-search-count" id="teacherSearchCount"></div></div>
-<div class="table-container"><table><thead><tr><th>Name</th><th>Email</th><th>Subjects</th><th>Assigned Classes</th><th>Section(s)</th><th>Role</th><th>Actions</th></tr></thead><tbody id="teachersTable"></tbody></table></div>
+<div class="table-container"><table><thead><tr><th>Name</th><th>Login Email</th><th>Password <button type="button" class="btn btn-sm btn-secondary" style="padding:1px 8px;font-size:11px;margin-left:4px" onclick="ngisToggleAllTeacherPw(this)">Show all</button></th><th>Subjects</th><th>Assigned Classes</th><th>Section(s)</th><th>Role</th><th>Actions</th></tr></thead><tbody id="teachersTable"></tbody></table></div>
 </div>
 </div>
 
@@ -3653,6 +3653,12 @@ closeModal('editStudentModal');
 loadStudents();
 }
 
+function ngisToggleAllTeacherPw(btn){
+  const spans=document.querySelectorAll('#teachersTable .ngis-tpw');
+  const show=btn.textContent.trim()==='Show all';
+  spans.forEach(sp=>{sp.textContent=show?sp.dataset.p:'••••••';});
+  btn.textContent=show?'Hide all':'Show all';
+}
 function renderTeachersTable(){
   const tbody=document.getElementById('teachersTable');
   if(!tbody)return;
@@ -3668,9 +3674,9 @@ function renderTeachersTable(){
     const sectionNames=(t.ngis_sections||[]).map(k=>NGIS_SECTION_NAMES[k]||k).join(', ')||'Not assigned';
     rows.push(t);
     if(q&&!ngisMatch([t.name,t.email,subjNames,classNames,sectionNames,t.role],q)){rows.pop();return '';}
-    return '<tr><td><strong>'+escapeHtml(t.name||'')+'</strong></td><td>'+escapeHtml(t.email||'')+'</td><td>'+escapeHtml(subjNames)+'</td><td>'+escapeHtml(classNames)+'</td><td>'+escapeHtml(sectionNames)+'</td><td><span class="grade-badge '+(t.role==='admin'?'grade-a':'grade-c')+'">'+escapeHtml((t.role||'teacher').toUpperCase())+'</span></td><td><button type="button" class="btn btn-primary btn-sm edit-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'" onclick="return ngisOpenTeacherEdit(event,this)" style="margin-right:5px"><i class="fas fa-edit"></i> Edit</button><button type="button" class="btn btn-danger btn-sm delete-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'"><i class="fas fa-trash"></i></button></td></tr>';
-  }).join('')||'<tr><td colspan="7" class="empty-state">No teachers yet</td></tr>';
-  if(q&&!rows.length)tbody.innerHTML='<tr><td colspan="7" class="empty-state">No teacher matches your search</td></tr>';
+    return '<tr><td><strong>'+escapeHtml(t.name||'')+'</strong></td><td>'+escapeHtml(t.email||'')+'</td><td><span class="mg-pw ngis-tpw" style="cursor:pointer;font-family:monospace" onclick="this.textContent=this.textContent===\'••••••\'?this.dataset.p:\'••••••\'" data-p="'+escapeHtml(t.password||'(not set)')+'" title="Click to show / hide">••••••</span></td><td>'+escapeHtml(subjNames)+'</td><td>'+escapeHtml(classNames)+'</td><td>'+escapeHtml(sectionNames)+'</td><td><span class="grade-badge '+(t.role==='admin'?'grade-a':'grade-c')+'">'+escapeHtml((t.role||'teacher').toUpperCase())+'</span></td><td><button type="button" class="btn btn-primary btn-sm edit-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'" onclick="return ngisOpenTeacherEdit(event,this)" style="margin-right:5px"><i class="fas fa-edit"></i> Edit</button><button type="button" class="btn btn-danger btn-sm delete-teacher-btn" data-teacher-id="'+escapeHtml(String(t.id))+'"><i class="fas fa-trash"></i></button></td></tr>';
+  }).join('')||'<tr><td colspan="8" class="empty-state">No teachers yet</td></tr>';
+  if(q&&!rows.length)tbody.innerHTML='<tr><td colspan="8" class="empty-state">No teacher matches your search</td></tr>';
   const cnt=document.getElementById('teacherSearchCount');
   if(cnt)cnt.textContent=q?(rows.length+' of '+teachers.length+' teachers'):'';
 }
