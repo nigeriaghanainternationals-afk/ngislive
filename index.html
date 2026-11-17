@@ -2866,7 +2866,7 @@ window.addEventListener('resize',()=>{if(window.innerWidth>768)closeMobileSideba
 function ngisSectionOfClass(name){
  const n=String(name||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(/NURSERY|CRECHE|PRENURSERY|KINDERGARTEN|KG[123]?|RECEPTION|PLAYGROUP|EARLYYEARS/.test(n))return 'nursery';
- if(/PRIMARY|^PRY|^PRI[1-6]|^YEAR[1-6]|^BASIC[1-6]/.test(n))return 'primary';
+ if(/PRIMARY|^PRY|^PRI[1-6]|^YEAR[1-6](?!\d)|^BASIC[1-6](?!\d)/.test(n))return 'primary';
  if(/SECONDARY|^JSS|^JS[123]|^SSS|^SS[123]|^SENIOR|^JUNIOR|^YEAR(7|8|9|10|11|12)/.test(n))return 'secondary';
  return null;
 }
@@ -11653,7 +11653,7 @@ function allowed(u){
     return{ok:true};
   }
   if(u.role==='admin'||u.role==='management')return{ok:false,msg:'Administrators and management use the main school link.'};
-  const secs=Array.isArray(u.school_sections)?u.school_sections:[];
+  const secs=(Array.isArray(u.school_sections)?u.school_sections:[]).map(k=>/secondary/.test(k)?'secondary':k);
   if(!secs.includes(SEC))return{ok:false,msg:'You are not assigned to the '+S.label+' section. Please use your own section link or contact the administrator.'};
   return{ok:true};
 }
@@ -12354,7 +12354,7 @@ function guess(name){
   const n=String(name||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   if(/NURSERY|CRECHE|PRENURSERY|KINDERGARTEN|KG[123]?|RECEPTION|PLAYGROUP|EARLYYEARS/.test(n))return 'nursery';
   if(/SECONDARY|^JSS|^JS[123]|^SSS|^SS[123]|^SENIOR|^JUNIOR|^YEAR(7|8|9|10|11|12)/.test(n))return 'secondary';
-  if(/PRIMARY|^PRY|^PRI[1-6]|^YEAR[1-6]|^BASIC[1-6]/.test(n))return 'primary';
+  if(/PRIMARY|^PRY|^PRI[1-6]|^YEAR[1-6](?!\d)|^BASIC[1-6](?!\d)/.test(n))return 'primary';
   return null;
 }
 /* An explicit section set on the class wins; otherwise the name is used (Year 10-12 now correctly read as Secondary). */
