@@ -1094,6 +1094,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <div class="nav-item active" onclick="showSection('teacherDashboard',this)"><i class="fas fa-home"></i> Dashboard</div>
 <div class="nav-item" onclick="showSection('enterGrades',this)"><i class="fas fa-edit"></i> Enter Assessment</div>
 <div class="nav-item" onclick="showSection('midTermPortal',this)"><i class="fas fa-clipboard-check"></i> Mid-Term Assessment</div>
+<div class="nav-item" onclick="showSection('scoreDownloads',this)"><i class="fas fa-file-download"></i> Download Scores (Excel)</div>
 <div class="nav-item" onclick="showSection('viewReports',this)"><i class="fas fa-file-alt"></i> View Reports</div>
 <div class="nav-item ngis-class-reports" style="display:none" onclick="showSection('reportCardSection',this)"><i class="fas fa-id-card"></i> Weekly Report Cards</div>
 <div class="nav-item ngis-class-reports" style="display:none" onclick="showSection('reportZipSection',this)"><i class="fas fa-file-archive"></i> Download Report Cards (ZIP)</div>
@@ -1159,6 +1160,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <div class="nav-item" onclick="showSection('teacherAssignments',this)"><i class="fas fa-tasks"></i> Assignments</div>
 <div class="nav-item" onclick="showSection('allReports',this)"><i class="fas fa-chart-bar"></i> All Reports</div>
 <div class="nav-item" onclick="showSection('midTermAdmin',this)"><i class="fas fa-clipboard-check"></i> Mid-Term Assessment</div>
+<div class="nav-item" onclick="showSection('scoreDownloads',this)"><i class="fas fa-file-download"></i> Download Scores (Excel)</div>
 <div class="nav-item" onclick="showSection('midTermAnalysis',this)"><i class="fas fa-trophy"></i> Mid-Term Analysis</div>
 <div class="nav-item" onclick="showSection('midTermBroadsheet',this)"><i class="fas fa-table"></i> Mid-Term Broadsheet</div>
 <div class="nav-item" onclick="showSection('reportCardSection',this)"><i class="fas fa-id-card"></i> Report Cards</div>
@@ -2276,7 +2278,25 @@ Only the class teacher assigned to this class can save the comment.
 <div class="card-header"><h3><i class="fas fa-user-graduate"></i> My Class Students</h3><button class="btn btn-primary btn-sm" onclick="tsOpenAddStudent()"><i class="fas fa-plus"></i> Add Student</button></div>
 <div class="form-grid" style="margin-bottom:16px;"><div class="form-group"><label>Class</label><select id="tsStuClass" onchange="tsRenderStudents()"></select></div><div class="form-group"><label><i class="fas fa-search"></i> Search Student</label><div class="ngis-search"><input type="search" id="tsStuSearch" oninput="tsRenderStudents()" placeholder="Name or registration no…" autocomplete="off"><button type="button" class="ngis-search-x" onclick="ngisClearSearch('tsStuSearch',tsRenderStudents)" title="Clear">&times;</button></div><div class="ngis-search-count" id="tsStuSearchCount"></div></div></div>
 <div class="student-login-tools"><i class="fas fa-shield-alt"></i> Each new student gets the next free registration number automatically (e.g. <b>NGIS/25/2026</b>). A number that belongs to a student can never be given to another student.</div>
-<div class="table-container"><table><thead><tr><th>#</th><th>Student Name</th><th>Registration No. (Username)</th><th>Password</th></tr></thead><tbody id="tsStuTable"></tbody></table></div>
+<div class="table-container"><table><thead><tr><th>#</th><th>Student Name</th><th>Gender</th><th>Registration No. (Username)</th><th>Password</th><th>Actions</th></tr></thead><tbody id="tsStuTable"></tbody></table></div>
+</div>
+</div>
+
+<div id="scoreDownloads" class="section hidden">
+<div class="card">
+<div class="card-header"><h3><i class="fas fa-file-download"></i> Download Scores</h3><span class="midterm-badge" id="sdRoleBadge"></span></div>
+<p style="font-size:.86rem;color:#555;margin:0 0 14px;">Choose the session and term, then download one Excel file for the weekly assessments, or one for the mid-term scores. Each class has its own sheet.</p>
+<div class="form-grid" style="margin-bottom:16px;">
+<div class="form-group"><label>Session</label><select id="sdSession" onchange="sdFillTerms()"></select></div>
+<div class="form-group"><label>Term</label><select id="sdTerm"></select></div>
+<div class="form-group"><label>Subject</label><select id="sdSubject"></select></div>
+<div class="form-group"><label>Class (for mid-term and weekly)</label><select id="sdClass"></select></div>
+</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+<button class="btn btn-primary" id="sdWeeklyBtn" onclick="sdDownloadWeekly()"><i class="fas fa-file-excel"></i> Download All Weekly Assessments</button>
+<button class="btn btn-success" id="sdMidBtn" onclick="sdDownloadMid()"><i class="fas fa-file-excel"></i> Download Mid-Term Scores</button>
+</div>
+<div id="sdStatus" style="margin-top:14px;font-size:.88rem;color:#555;"></div>
 </div>
 </div>
 
@@ -2608,6 +2628,7 @@ Only the class teacher assigned to this class can save the comment.
 <h3><i class="fas fa-user-edit"></i> Edit Student</h3>
 <div class="form-group"><label>Full Name</label><input type="text" id="editStudentNameInput"></div>
 <div class="form-group"><label>Class</label><select id="editStudentClassInput"><option value="">-- Select Class --</option></select></div>
+<div class="form-group"><label>Gender</label><select id="editStudentGenderInput"><option value="">-- Select Gender --</option><option value="B">Boy</option><option value="G">Girl</option></select></div>
 <div class="form-group"><label>Student Login ID</label><input type="text" id="editStudentLoginIdInput" placeholder="e.g. NGIS/001/2024"></div>
 <div class="form-group"><label>Password</label><input type="text" id="editStudentPasswordInput" placeholder="Leave blank to keep current"></div>
 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('editStudentModal')">Cancel</button><button class="btn btn-primary" onclick="updateStudent()">Update Student</button></div>
@@ -3623,22 +3644,51 @@ const delBtn=e.target.closest('.delete-student-btn');
 if(delBtn){e.preventDefault();deleteStudent(delBtn.getAttribute('data-student-id'));return;}
 });
 
-function openEditStudent(id){
+function ngisTeacherClassIdSet(){
+ const set=new Set();
+ if(!currentUser||currentUser.role!=='teacher')return set;
+ (classTeachers||[]).forEach(x=>{if(String(x.teacher_id)===String(currentUser.id))set.add(String(x.class_id));});
+ if(currentUser.class_id)set.add(String(currentUser.class_id));
+ (typeof ngisDesignatedClassIds==='function'?ngisDesignatedClassIds():[]).forEach(id=>set.add(String(id)));
+ return set;
+}
+/* Admin may edit any student. A class teacher may edit students of the class/classes assigned to them. */
+function ngisCanEditStudentClass(classId){
+ if(currentUser?.role==='admin')return true;
+ if(currentUser?.role==='teacher')return classId!=null&&ngisTeacherClassIdSet().has(String(classId));
+ return false;
+}
+async function openEditStudent(id){
 const s=students.find(x=>String(x.id)===String(id));
 if(!s)return;
+if(!ngisCanEditStudentClass(s.class_id)){showToast('You can only edit students in your own class.','error');return;}
 editingStudentId=id;
 document.getElementById('editStudentNameInput').value=s.name;
-document.getElementById('editStudentClassInput').value=s.class_id||'';
+const clsSel=document.getElementById('editStudentClassInput');
+if(currentUser?.role==='teacher'){
+ const ok=ngisTeacherClassIdSet();
+ clsSel.innerHTML='<option value="">-- Select Class --</option>'+(classes||[]).filter(c=>ok.has(String(c.id))).map(c=>'<option value="'+escapeHtml(c.id)+'">'+escapeHtml(c.name)+'</option>').join('');
+}
+clsSel.value=s.class_id||'';
 document.getElementById('editStudentLoginIdInput').value=s.student_login_id||'';
 document.getElementById('editStudentPasswordInput').value='';
+const gSel=document.getElementById('editStudentGenderInput');
+gSel.value='';gSel.dataset.orig='';
 openModal('editStudentModal');
+try{
+ if(window.ngisGenderApi){await window.ngisGenderApi.ready();const g=window.ngisGenderApi.get(s);if(editingStudentId===id){gSel.value=g;gSel.dataset.orig=g;}}
+}catch(e){console.warn('Gender lookup failed',e);}
 }
 async function updateStudent(){
 const name=document.getElementById('editStudentNameInput').value.trim();
 const classId=document.getElementById('editStudentClassInput').value;
 const loginId=document.getElementById('editStudentLoginIdInput').value.trim();
 const password=document.getElementById('editStudentPasswordInput').value;
+const gSel=document.getElementById('editStudentGenderInput');
+const gender=gSel?gSel.value:'';
 if(!name||!classId){showToast('Enter name and select class','error');return;}
+const cur=students.find(x=>String(x.id)===String(editingStudentId));
+if(!cur||!ngisCanEditStudentClass(cur.class_id)||!ngisCanEditStudentClass(classId)){showToast('You can only edit students in your own class.','error');return;}
 if(loginId){
  const {data:existing}=await supabaseClient.from('students').select('id').eq('student_login_id',loginId).neq('id',editingStudentId).limit(1);
  if(existing&&existing.length){showToast('That Student Login ID is already in use','error');return;}
@@ -3648,9 +3698,15 @@ if(loginId)updateData.student_login_id=loginId;
 if(password)updateData.student_password=password;
 const{error}=await supabaseClient.from('students').update(updateData).eq('id',editingStudentId);
 if(error){showToast('Error: '+error.message,'error');return;}
-showToast('Student updated successfully');
+let genderNote='';
+if(gender&&gender!==(gSel.dataset.orig||'')&&window.ngisGenderApi){
+ try{const ok=await window.ngisGenderApi.set(cur,gender);if(!ok)genderNote=' (gender saved on this device only - register tables not found)';}
+ catch(e){genderNote=' (gender not saved: '+(e.message||e)+')';}
+}
+showToast('Student updated successfully'+genderNote);
 closeModal('editStudentModal');
-loadStudents();
+await loadStudents();
+try{window.tsRenderStudents&&window.tsRenderStudents();}catch(e){}
 }
 
 function ngisToggleAllTeacherPw(btn){
@@ -8434,6 +8490,12 @@ window.regGRender=function(){const c=$('regGClass').value,onlyU=$('regGShow').va
 window.regSetG=function(sid,g){const _s=students.find(x=>sameId(x.id,sid));if(_s&&!ownScope(_s.class_id)){showToast('View only - this is not your class','error');return;}st.gen[S(sid)]=g;pend.gen.set(S(sid),{student_id:S(sid),gender:g});queueSave();
   const tr=document.querySelector('#regGList tr[data-sid="'+sid+'"]');if(tr){const b=tr.querySelectorAll('button');b[0].className='btn btn-sm '+(g==='B'?'btn-primary':'');b[0].style.background=g==='B'?'':'#eee';b[1].className='btn btn-sm '+(g==='G'?'btn-secondary':'');b[1].style.background=g==='G'?'':'#eee';}
   const l=students.filter(s=>scopeClass(s.class_id)&&(!$('regGClass').value||sameId(s.class_id,$('regGClass').value)));$('regGenCount').textContent=l.length+' students · '+l.filter(s=>!gender(s)).length+' without gender';};
+/* Used by Edit Student (admin + class teacher): reads/writes the same gender record as the register. */
+window.ngisGenderApi={
+  ready:async function(){await load();},
+  get:function(s){return gender(s);},
+  set:async function(s,code){await load();const v=code==='B'?'Boy':code==='G'?'Girl':'';if(!v)return true;const k=S(s.id);st.gen[k]=v;pend.gen.set(k,{student_id:k,gender:v});mirror();await flush();return !st.local&&!pend.gen.has(k);}
+};
 window.regGDownload=function(){const c=$('regGClass').value,l=students.filter(s=>scopeClass(s.class_id)&&(!c||sameId(s.class_id,c))).sort((a,b)=>cName(a.class_id).localeCompare(cName(b.class_id))||S(a.name).localeCompare(S(b.name)));
   dl('NGIS_student_genders.csv','\ufeff'+[['student_id','student_name','class_name','gender'],...l.map(s=>[s.id,s.name,cName(s.class_id),gender(s)==='B'?'Boy':gender(s)==='G'?'Girl':''])].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv');};
 /* Separate Boys / Girls lists (uses the class chosen in the Class box above) */
@@ -12501,7 +12563,8 @@ window.tsRenderStudents=function(){
   const q=ngisNorm($('tsStuSearch')?.value);
   if(q)list=list.filter(s=>ngisMatch([s.name,s.student_login_id],q));
   const cnt=$('tsStuSearchCount');if(cnt)cnt.textContent=q?(list.length+' of '+total+' students'):'';
-  tb.innerHTML=list.map((s,i)=>'<tr><td>'+(i+1)+'</td><td><strong>'+E(s.name||'')+'</strong></td><td><code>'+E(s.student_login_id||'-')+'</code></td><td>'+E(s.student_password||'-')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty-state">'+(cid?(q?'No student matches your search':'No students in this class yet'):'Choose a class')+'</td></tr>';
+  const gl=s=>{let g='';try{g=window.ngisGenderApi?window.ngisGenderApi.get(s):'';}catch(e){}return g==='B'?'Boy':g==='G'?'Girl':'<span style="color:#c0392b">Not set</span>';};
+  tb.innerHTML=list.map((s,i)=>'<tr><td>'+(i+1)+'</td><td><strong>'+E(s.name||'')+'</strong></td><td>'+gl(s)+'</td><td><code>'+E(s.student_login_id||'-')+'</code></td><td>'+E(s.student_password||'-')+'</td><td><button type="button" class="btn btn-primary btn-sm edit-student-btn" data-student-id="'+E(s.id)+'"><i class="fas fa-edit"></i> Edit</button></td></tr>').join('')||'<tr><td colspan="6" class="empty-state">'+(cid?(q?'No student matches your search':'No students in this class yet'):'Choose a class')+'</td></tr>';
 };
 async function tsInit(){
   const sel=$('tsStuClass');if(!sel)return;
@@ -12510,6 +12573,7 @@ async function tsInit(){
   sel.innerHTML=list.map(c=>'<option value="'+E(c.id)+'">'+E(c.name)+'</option>').join('');
   if(prev&&list.some(c=>String(c.id)===prev))sel.value=prev;
   try{await loadStudents();}catch(e){}
+  try{if(window.ngisGenderApi)await window.ngisGenderApi.ready();}catch(e){}
   window.tsRenderStudents();
 }
 window.tsOpenAddStudent=function(){
@@ -15094,6 +15158,206 @@ window.saveSubject=async function(){
   await loadSubjects();
   try{await loadTeachers();}catch(e){}try{await loadClassTeachers();}catch(e){}
   showToast(notes.length?('Subject added. '+notes.join(' ')):('Subject added'+(sections.length?' to '+sections.map(function(k){return SECS[k];}).join(' & '):'')+(tIds.length?' with '+tIds.length+' teacher'+(tIds.length>1?'s':''):'')),notes.length?'error':'success');
+};
+})();
+</script>
+<script>
+/* ===== Download Scores: weekly assessments (one file per term) and mid-term scores (per class) ===== */
+(function(){
+const $=id=>document.getElementById(id);
+const E=v=>escapeHtml(v);
+const isAdm=()=>!!currentUser&&currentUser.role==='admin';
+const isTch=()=>!!currentUser&&currentUser.role==='teacher';
+const same=(a,b)=>String(a)===String(b);
+function status(t,bad){const e=$('sdStatus');if(e){e.textContent=t||'';e.style.color=bad?'#c0392b':'#555';}}
+function opt(v,t,sel){return '<option value="'+E(v)+'"'+(sel?' selected':'')+'>'+E(t)+'</option>';}
+function teacherClassIds(){return (typeof ngisTeacherClassIdSet==='function')?ngisTeacherClassIdSet():new Set();}
+function allowedClasses(){
+  if(isAdm())return classes||[];
+  const ok=teacherClassIds();
+  return ok.size?(classes||[]).filter(c=>ok.has(String(c.id))):(classes||[]);
+}
+async function allowedSubjects(){
+  if(isAdm())return subjects||[];
+  const ids=new Set(await getCurrentTeacherSubjectIds(true));
+  return (subjects||[]).filter(s=>ids.has(String(s.id)));
+}
+window.sdFillTerms=function(){
+  const sid=$('sdSession').value,old=$('sdTerm').value;
+  const list=(terms||[]).filter(t=>!sid||!t.session_id||same(t.session_id,sid));
+  $('sdTerm').innerHTML=list.map(t=>opt(t.id,t.name)).join('')||'<option value="">-- No term --</option>';
+  if(old&&list.some(t=>same(t.id,old)))$('sdTerm').value=old;
+};
+async function setup(){
+  if(!isAdm()&&!isTch())return;
+  if(!sessions?.length&&typeof loadSessions==='function')await loadSessions();
+  if(!terms?.length&&typeof loadTerms==='function')await loadTerms();
+  if(!classes?.length&&typeof loadClasses==='function')await loadClasses();
+  if(!subjects?.length&&typeof loadSubjects==='function')await loadSubjects();
+  if(!weeks?.length&&typeof loadWeeks==='function')await loadWeeks();
+  $('sdRoleBadge').innerHTML=isAdm()?'<i class="fas fa-user-shield"></i> Admin: all subjects':'<i class="fas fa-chalkboard-teacher"></i> Your subjects only';
+  const act=(sessions||[]).find(s=>s.is_active);
+  $('sdSession').innerHTML=(sessions||[]).map(s=>opt(s.id,s.name+(s.is_active?' (ACTIVE)':''),act&&same(s.id,act.id))).join('');
+  sdFillTerms();
+  const subs=await allowedSubjects();
+  $('sdSubject').innerHTML=(subs.length!==1?opt('',isAdm()?'All subjects':'All my subjects'):'')+subs.map(s=>opt(s.id,s.name)).join('');
+  if(!subs.length)status('No subject is assigned to your account. Ask the administrator to tick your subjects in Teacher Management.',true);else status('');
+  const cls=allowedClasses();
+  $('sdClass').innerHTML=opt('','All classes')+cls.map(c=>opt(c.id,c.name)).join('');
+}
+function pick(){
+  const sessionId=$('sdSession').value,termId=$('sdTerm').value;
+  if(!sessionId||!termId){status('Select a session and a term first.',true);return null;}
+  return {sessionId,termId,
+    session:(sessions||[]).find(s=>same(s.id,sessionId))?.name||'',
+    term:(terms||[]).find(t=>same(t.id,termId))?.name||'',
+    subjectId:$('sdSubject').value,classId:$('sdClass').value};
+}
+async function subjectScope(sel){
+  const subs=await allowedSubjects();
+  if(!subs.length)return [];
+  return sel.subjectId?subs.filter(s=>same(s.id,sel.subjectId)):subs;
+}
+function classScope(sel){
+  const cls=allowedClasses();
+  return sel.classId?cls.filter(c=>same(c.id,sel.classId)):cls;
+}
+async function fetchAllRows(build){
+  let out=[],i=0;
+  for(;;){
+    const {data,error}=await build().range(i,i+999);
+    if(error)throw error;
+    out=out.concat(data||[]);
+    if(!data||data.length<1000)break;
+    i+=1000;
+  }
+  return out;
+}
+const nameKey=(a,b)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'});
+const fn=v=>String(v||'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+function sheetName(wb,base){
+  let n=String(base||'Sheet').replace(/[\\\/\?\*\[\]:]/g,' ').trim().slice(0,31)||'Sheet',k=2,t=n;
+  while(wb.SheetNames.includes(t)){const suf=' ('+k++ +')';t=n.slice(0,31-suf.length)+suf;}
+  return t;
+}
+const fmt=v=>v===null||v===undefined||v===''?'':Number(v);
+function gradeOf(avg){return (avg===''||avg===null)?'':getGrade(avg).grade;}
+function busy(on){['sdWeeklyBtn','sdMidBtn'].forEach(id=>{const b=$(id);if(b)b.disabled=on;});}
+
+window.sdDownloadWeekly=async function(){
+  const sel=pick();if(!sel)return;
+  busy(true);status('Collecting weekly assessments...');
+  try{
+    const subs=await subjectScope(sel);
+    if(!subs.length){status('No subject available for you.',true);return;}
+    let wk=(weeks||[]).filter(w=>same(w.term_id,sel.termId)&&(!w.session_id||same(w.session_id,sel.sessionId)));
+    wk.sort((x,y)=>(x.start_date&&y.start_date&&x.start_date!==y.start_date)?String(x.start_date).localeCompare(String(y.start_date)):String(x.name||'').localeCompare(String(y.name||''),undefined,{numeric:true}));
+    if(!wk.length){status('No weeks are set up for this term and session.',true);return;}
+    const weekIds=wk.map(w=>w.id),subIds=subs.map(s=>s.id);
+    const rows=await fetchAllRows(()=>supabaseClient.from('assessments').select('id,student_id,subject_id,week_id,assignment_score,test_score').in('week_id',weekIds).in('subject_id',subIds).order('id'));
+    if(!rows.length){status('No weekly scores have been entered for this term yet.',true);return;}
+    const stuMap=new Map((students||[]).map(s=>[String(s.id),s]));
+    const clsList=classScope(sel).slice().sort(nameKey);
+    const wb=XLSX.utils.book_new();
+    const multiSubject=subs.length>1;
+    let sheets=0;
+    for(const sub of subs.slice().sort(nameKey)){
+      for(const cls of clsList){
+        const stu=(students||[]).filter(s=>same(s.class_id,cls.id)).sort(nameKey);
+        const mine=rows.filter(r=>same(r.subject_id,sub.id)&&stuMap.get(String(r.student_id))&&same(stuMap.get(String(r.student_id)).class_id,cls.id));
+        if(!mine.length)continue;
+        const by=new Map(mine.map(r=>[String(r.student_id)+'|'+String(r.week_id),r]));
+        const usedWeeks=wk.filter(w=>mine.some(r=>same(r.week_id,w.id)));
+        const head1=['','Student Name'],head2=['No','Student Name'],merges=[];
+        usedWeeks.forEach(w=>{const c=head1.length;head1.push(w.name||'Week','','');head2.push('Assignment /10','Test /10','Total /20');merges.push({s:{r:4,c:c},e:{r:4,c:c+2}});});
+        head1.push('Term Total','Weeks Entered','Average /20','Grade');head2.push('','','','');
+        const aoa=[['NGIS - Weekly Assessment Record'],['Subject: '+sub.name,'Class: '+cls.name],['Term: '+sel.term,'Session: '+sel.session],[],head1,head2];
+        merges.push({s:{r:0,c:0},e:{r:0,c:5}});
+        stu.forEach((s,i)=>{
+          const line=[i+1,s.name||''];let tot=0,n=0;
+          usedWeeks.forEach(w=>{
+            const r=by.get(String(s.id)+'|'+String(w.id));
+            const a=r?fmt(r.assignment_score):'',t=r?fmt(r.test_score):'';
+            if(a===''&&t===''){line.push('','','');return;}
+            const wt=(a===''?0:a)+(t===''?0:t);tot+=wt;n++;line.push(a,t,wt);
+          });
+          const avg=n?Math.round(tot/n*100)/100:'';
+          line.push(n?tot:'',n||'',avg,gradeOf(avg));
+          aoa.push(line);
+        });
+        const ws=XLSX.utils.aoa_to_sheet(aoa);
+        ws['!merges']=merges;
+        ws['!cols']=[{wch:5},{wch:32}].concat(usedWeeks.flatMap(()=>[{wch:13},{wch:10},{wch:10}])).concat([{wch:12},{wch:13},{wch:12},{wch:8}]);
+        XLSX.utils.book_append_sheet(wb,ws,sheetName(wb,multiSubject?sub.name+' - '+cls.name:cls.name));
+        sheets++;
+      }
+    }
+    if(!sheets){status('No weekly scores found for the selected subject and class.',true);return;}
+    const who=subs.length===1?fn(subs[0].name):(isAdm()?'All_Subjects':'My_Subjects');
+    XLSX.writeFile(wb,'NGIS_Weekly_Assessments_'+who+'_'+fn(sel.term)+'_'+fn(sel.session)+'.xlsx');
+    status('Downloaded: '+sheets+' sheet(s) for '+sel.term+', '+sel.session+'.');
+    showToast('Weekly assessments downloaded');
+  }catch(e){console.error(e);status('Could not download: '+(e.message||e),true);showToast('Download failed: '+(e.message||e),'error');}
+  finally{busy(false);}
+};
+
+window.sdDownloadMid=async function(){
+  const sel=pick();if(!sel)return;
+  busy(true);status('Collecting mid-term scores...');
+  try{
+    const subs=await subjectScope(sel);
+    if(!subs.length){status('No subject available for you.',true);return;}
+    const clsList=classScope(sel).slice().sort(nameKey);
+    const subIds=subs.map(s=>s.id),clsIds=clsList.map(c=>c.id);
+    if(!clsIds.length){status('No class available.',true);return;}
+    const rows=await fetchAllRows(()=>supabaseClient.from('midterm_assessments').select('id,student_id,class_id,subject_id,major_test_score').eq('term_id',sel.termId).eq('session_id',sel.sessionId).in('subject_id',subIds).in('class_id',clsIds).order('id'));
+    if(!rows.length){status('No mid-term scores have been entered for this term yet.',true);return;}
+    const wb=XLSX.utils.book_new();let sheets=0;
+    for(const cls of clsList){
+      const mine=rows.filter(r=>same(r.class_id,cls.id)&&r.major_test_score!==null&&r.major_test_score!==undefined);
+      if(!mine.length)continue;
+      const subCols=subs.filter(s=>mine.some(r=>same(r.subject_id,s.id))).sort(nameKey);
+      const ids=new Set((students||[]).filter(s=>same(s.class_id,cls.id)).map(s=>String(s.id)));
+      mine.forEach(r=>ids.add(String(r.student_id)));
+      const stu=(students||[]).filter(s=>ids.has(String(s.id))).sort(nameKey);
+      const by=new Map(mine.map(r=>[String(r.student_id)+'|'+String(r.subject_id),r]));
+      const head=['No','Student Name'].concat(subCols.map(s=>s.name+' /20'));
+      const multi=subCols.length>1;
+      if(multi)head.push('Total','Average /20');
+      head.push('Grade');
+      const aoa=[['NGIS - Mid-Term Scores'],['Class: '+cls.name],['Term: '+sel.term,'Session: '+sel.session],[],head];
+      stu.forEach((s,i)=>{
+        const line=[i+1,s.name||''];let tot=0,n=0;
+        subCols.forEach(sc=>{const r=by.get(String(s.id)+'|'+String(sc.id));const v=r?fmt(r.major_test_score):'';if(v!==''){tot+=v;n++;}line.push(v);});
+        const avg=n?Math.round(tot/n*100)/100:'';
+        if(multi)line.push(n?tot:'',avg);
+        line.push(gradeOf(avg));
+        aoa.push(line);
+      });
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:Math.min(5,head.length-1)}}];
+      ws['!cols']=[{wch:5},{wch:32}].concat(subCols.map(()=>({wch:14}))).concat(multi?[{wch:9},{wch:12},{wch:8}]:[{wch:8}]);
+      XLSX.utils.book_append_sheet(wb,ws,sheetName(wb,cls.name));
+      sheets++;
+    }
+    if(!sheets){status('No mid-term scores found for the selected subject and class.',true);return;}
+    const who=subs.length===1?fn(subs[0].name):(isAdm()?'All_Subjects':'My_Subjects');
+    XLSX.writeFile(wb,'NGIS_MidTerm_Scores_'+who+'_'+fn(sel.term)+'_'+fn(sel.session)+'.xlsx');
+    status('Downloaded: '+sheets+' class sheet(s) for '+sel.term+', '+sel.session+'.');
+    showToast('Mid-term scores downloaded');
+  }catch(e){console.error(e);status('Could not download: '+(e.message||e),true);showToast('Download failed: '+(e.message||e),'error');}
+  finally{busy(false);}
+};
+
+const _prev=window.showSection;
+window.showSection=function(id,nav){
+  if(id==='scoreDownloads'&&!isAdm()&&!isTch()){showToast('Not available for this account.','error');return;}
+  const r=_prev.apply(this,arguments);
+  if(id==='scoreDownloads'){
+    const t=$('pageTitle');if(t)t.innerHTML='<i class="fas fa-file-download"></i> Download Scores';
+    setup().catch(e=>{console.error(e);status('Could not load options: '+(e.message||e),true);});
+  }
+  return r;
 };
 })();
 </script>
