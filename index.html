@@ -1958,6 +1958,17 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <tbody id="myAssessmentsTable"></tbody>
 </table>
 </div>
+<div id="myAssessmentsCount" style="font-size:.82rem;color:#666;margin-top:8px"></div>
+</div>
+<div class="card" style="margin-top:20px">
+<div class="card-header"><h3><i class="fas fa-clipboard-check"></i> My Mid-Term Scores</h3></div>
+<div class="form-grid" style="margin-bottom:14px">
+<div class="form-group"><label>Session</label><select id="myMidSession" onchange="loadMyMidterm()"></select></div>
+<div class="form-group"><label>Term</label><select id="myMidTerm" onchange="loadMyMidterm()"></select></div>
+<div class="form-group"><label>Class</label><select id="myMidClass" onchange="loadMyMidterm()"></select></div>
+</div>
+<div class="table-container"><table><thead><tr><th>Student</th><th>Class</th><th>Subject</th><th>Term</th><th>Session</th><th style="text-align:center">Score /20</th><th>Grade</th></tr></thead><tbody id="myMidtermTable"></tbody></table></div>
+<div id="myMidtermCount" style="font-size:.82rem;color:#666;margin-top:8px"></div>
 </div>
 </div>
 
@@ -2523,6 +2534,18 @@ Only the class teacher assigned to this class can save the comment.
 <div class="form-group"><label>Filter by Week</label><select id="adminReportWeek" onchange="loadAllReports()"><option value="">All Weeks</option></select></div>
 </div>
 <div class="table-container"><table><thead><tr><th>Student</th><th>Class</th><th>Week</th><th>Subject</th><th style="text-align:center">Class Work</th><th style="text-align:center">Test</th><th style="text-align:center">Total</th><th>Grade</th><th>Teacher</th></tr></thead><tbody id="allReportsTable"></tbody></table></div>
+</div>
+
+<div class="card" style="margin-top:20px">
+<div class="card-header"><h3><i class="fas fa-clipboard-check"></i> All Mid-Term Scores</h3></div>
+<div class="form-grid" style="margin-bottom:14px">
+<div class="form-group"><label>Session</label><select id="admMidSession" onchange="loadAdminMidterm()"></select></div>
+<div class="form-group"><label>Term</label><select id="admMidTerm" onchange="loadAdminMidterm()"></select></div>
+<div class="form-group"><label>Class</label><select id="admMidClass" onchange="loadAdminMidterm()"></select></div>
+<div class="form-group"><label>Subject</label><select id="admMidSubject" onchange="loadAdminMidterm()"></select></div>
+</div>
+<div class="table-container"><table><thead><tr><th>Student</th><th>Class</th><th>Subject</th><th>Term</th><th>Session</th><th style="text-align:center">Score /20</th><th>Grade</th><th>Teacher</th></tr></thead><tbody id="admMidtermTable"></tbody></table></div>
+<div id="admMidtermCount" style="font-size:.82rem;color:#666;margin-top:8px"></div>
 </div>
 </div>
 
@@ -15358,6 +15381,125 @@ window.showSection=function(id,nav){
     setup().catch(e=>{console.error(e);status('Could not load options: '+(e.message||e),true);});
   }
   return r;
+};
+})();
+</script>
+<script>
+/* ===== Score records: teachers see all their weekly + mid-term entries, admin sees everything (no 1000-row cap) ===== */
+(function(){
+const $=id=>document.getElementById(id),E=v=>escapeHtml(v==null?'':v);
+const same=(a,b)=>String(a)===String(b);
+async function pageAll(build){let out=[],i=0;for(let n=0;n<60;n++){const {data,error}=await build().range(i,i+999);if(error)throw error;out=out.concat(data||[]);if(!data||data.length<1000)break;i+=1000;}return out;}
+const nm=(arr,id)=>(arr||[]).find(x=>same(x.id,id))?.name||'-';
+const stuMap=()=>new Map((students||[]).map(s=>[String(s.id),s]));
+const clsName=id=>nm(classes,id);
+function opts(list,all,sel){return '<option value="">'+all+'</option>'+(list||[]).map(x=>'<option value="'+E(x.id)+'"'+(sel&&same(sel,x.id)?' selected':'')+'>'+E(x.name)+(x.is_active?' (ACTIVE)':'')+'</option>').join('');}
+async function ensure(){
+  if(!sessions?.length&&typeof loadSessions==='function')await loadSessions();
+  if(!terms?.length&&typeof loadTerms==='function')await loadTerms();
+  if(!classes?.length&&typeof loadClasses==='function')await loadClasses();
+  if(!subjects?.length&&typeof loadSubjects==='function')await loadSubjects();
+  if(!students?.length&&typeof loadStudents==='function')await loadStudents();
+  if(!weeks?.length&&typeof loadWeeks==='function')await loadWeeks();
+}
+const isT=()=>currentUser?.role==='teacher';
+function myClassList(){
+  if(!isT())return classes||[];
+  const ok=ngisTeacherClassIdSet();
+  return ok.size?(classes||[]).filter(c=>ok.has(String(c.id))):(classes||[]);
+}
+function gradeCell(v){const g=midTermGrade(v);return '<span class="grade-badge '+g.cls+'">'+g.grade+'</span>';}
+function wkGrade(total){const g=getGrade(total>0?(total/20)*100:0);return '<span class="grade-badge '+g.cls+'">'+g.grade+'</span>';}
+function fillTop(prefix){
+  const act=(sessions||[]).find(s=>s.is_active);
+  const ses=$(prefix+'Session');
+  if(ses&&!ses.options.length)ses.innerHTML=opts(sessions,'All sessions',act&&act.id);
+  const ter=$(prefix+'Term');
+  if(ter&&!ter.options.length)ter.innerHTML=opts(terms,'All terms');
+}
+
+/* ---------- Teacher: weekly entries ---------- */
+window.loadMyAssessments=async function(){
+  const tb=$('myAssessmentsTable');if(!tb)return;
+  tb.innerHTML='<tr><td colspan="9" class="empty-state">Loading...</td></tr>';
+  try{
+    await ensure();
+    let sub=[];if(isT())sub=await getCurrentTeacherSubjectIds(true);
+    const filt=sub.length?'teacher_id.eq.'+currentUser.id+',subject_id.in.('+sub.join(',')+')':'teacher_id.eq.'+currentUser.id;
+    let rows=await pageAll(()=>supabaseClient.from('assessments').select('id,student_id,subject_id,week_id,assignment_score,test_score,teacher_id,created_at').or(filt).order('created_at',{ascending:false}).order('id'));
+    const sm=stuMap(),ok=isT()?ngisTeacherClassIdSet():new Set();
+    if(ok.size)rows=rows.filter(r=>same(r.teacher_id,currentUser.id)||(sm.get(String(r.student_id))&&ok.has(String(sm.get(String(r.student_id)).class_id))));
+    tb.innerHTML=rows.map(a=>{
+      const s=sm.get(String(a.student_id)),total=(a.assignment_score||0)+(a.test_score||0);
+      return '<tr><td><strong>'+E(s?.name||'-')+'</strong></td><td>'+E(s?clsName(s.class_id):'-')+'</td><td>'+E(nm(weeks,a.week_id))+'</td><td>'+E(nm(subjects,a.subject_id))+'</td><td style="text-align:center">'+(a.assignment_score??'-')+'</td><td style="text-align:center">'+(a.test_score??'-')+'</td><td style="text-align:center"><strong>'+total.toFixed(1)+'</strong></td><td>'+wkGrade(total)+'</td><td>'+(a.created_at?new Date(a.created_at).toLocaleDateString():'-')+'</td></tr>';
+    }).join('')||'<tr><td colspan="9" class="empty-state">No assessments yet</td></tr>';
+    const c=$('myAssessmentsCount');if(c)c.textContent=rows.length+' weekly record(s)';
+  }catch(e){console.error(e);tb.innerHTML='<tr><td colspan="9" class="empty-state">Could not load: '+E(e.message||e)+'</td></tr>';}
+  window.loadMyMidterm();
+};
+
+/* ---------- Teacher: mid-term entries ---------- */
+window.loadMyMidterm=async function(){
+  const tb=$('myMidtermTable');if(!tb)return;
+  try{
+    await ensure();fillTop('myMid');
+    const cs=$('myMidClass');if(cs&&!cs.options.length)cs.innerHTML=opts(myClassList(),'All my classes');
+    let sub=[];if(isT()){sub=await getCurrentTeacherSubjectIds(true);if(!sub.length){tb.innerHTML='<tr><td colspan="7" class="empty-state">No subjects are assigned to your account.</td></tr>';return;}}
+    tb.innerHTML='<tr><td colspan="7" class="empty-state">Loading...</td></tr>';
+    const ses=$('myMidSession').value,ter=$('myMidTerm').value,cl=$('myMidClass').value;
+    const ok=isT()?ngisTeacherClassIdSet():new Set();
+    const rows=await pageAll(()=>{let q=supabaseClient.from('midterm_assessments').select('id,student_id,class_id,subject_id,term_id,session_id,major_test_score,teacher_id').not('major_test_score','is',null);
+      if(ses)q=q.eq('session_id',ses);if(ter)q=q.eq('term_id',ter);
+      if(cl)q=q.eq('class_id',cl);else if(ok.size)q=q.in('class_id',[...ok]);
+      if(isT())q=q.in('subject_id',sub);
+      return q.order('id');});
+    const sm=stuMap();
+    rows.sort((a,b)=>clsName(a.class_id).localeCompare(clsName(b.class_id))||nm(subjects,a.subject_id).localeCompare(nm(subjects,b.subject_id))||String(sm.get(String(a.student_id))?.name||'').localeCompare(String(sm.get(String(b.student_id))?.name||'')));
+    tb.innerHTML=rows.map(r=>'<tr><td><strong>'+E(sm.get(String(r.student_id))?.name||'-')+'</strong></td><td>'+E(clsName(r.class_id))+'</td><td>'+E(nm(subjects,r.subject_id))+'</td><td>'+E(nm(terms,r.term_id))+'</td><td>'+E(nm(sessions,r.session_id))+'</td><td style="text-align:center"><strong>'+r.major_test_score+'</strong></td><td>'+gradeCell(r.major_test_score)+'</td></tr>').join('')||'<tr><td colspan="7" class="empty-state">No mid-term scores found for this selection</td></tr>';
+    const c=$('myMidtermCount');if(c)c.textContent=rows.length+' mid-term record(s)';
+  }catch(e){console.error(e);tb.innerHTML='<tr><td colspan="7" class="empty-state">Could not load: '+E(e.message||e)+'</td></tr>';}
+};
+
+/* ---------- Admin: all weekly ---------- */
+window.loadAllReports=async function(){
+  const tb=$('allReportsTable');if(!tb)return;
+  tb.innerHTML='<tr><td colspan="9" class="empty-state">Loading...</td></tr>';
+  try{
+    await ensure();
+    const cSel=$('adminReportClass'),wSel=$('adminReportWeek');
+    if(cSel&&cSel.options.length<=1)cSel.innerHTML=opts(classes,'All Classes');
+    if(wSel&&wSel.options.length<=1)wSel.innerHTML=opts(weeks,'All Weeks');
+    const cl=cSel?.value,wk=wSel?.value,sm=stuMap();
+    let ids=null;if(cl){ids=(students||[]).filter(s=>same(s.class_id,cl)).map(s=>s.id);if(!ids.length){tb.innerHTML='<tr><td colspan="9" class="empty-state">No students in this class</td></tr>';return;}}
+    let rows=[];
+    if(ids){for(let i=0;i<ids.length;i+=80){const part=ids.slice(i,i+80);rows=rows.concat(await pageAll(()=>{let q=supabaseClient.from('assessments').select('id,student_id,subject_id,week_id,assignment_score,test_score,teacher_id,created_at').in('student_id',part);if(wk)q=q.eq('week_id',wk);return q.order('id');}));}}
+    else rows=await pageAll(()=>{let q=supabaseClient.from('assessments').select('id,student_id,subject_id,week_id,assignment_score,test_score,teacher_id,created_at');if(wk)q=q.eq('week_id',wk);return q.order('created_at',{ascending:false}).order('id');});
+    const shown=rows.slice(0,3000);
+    tb.innerHTML=shown.map(a=>{const s=sm.get(String(a.student_id)),total=(a.assignment_score||0)+(a.test_score||0);
+      return '<tr><td><strong>'+E(s?.name||'-')+'</strong></td><td>'+E(s?clsName(s.class_id):'-')+'</td><td>'+E(nm(weeks,a.week_id))+'</td><td>'+E(nm(subjects,a.subject_id))+'</td><td style="text-align:center">'+(a.assignment_score??'-')+'</td><td style="text-align:center">'+(a.test_score??'-')+'</td><td style="text-align:center"><strong>'+total.toFixed(1)+'</strong></td><td>'+wkGrade(total)+'</td><td>'+E(nm(teachers,a.teacher_id))+'</td></tr>';
+    }).join('')||'<tr><td colspan="9" class="empty-state">No assessments found</td></tr>';
+    if(rows.length>shown.length)tb.insertAdjacentHTML('beforeend','<tr><td colspan="9" class="empty-state">Showing the first '+shown.length+' of '+rows.length+' records. Pick a class or week to narrow, or use Download Scores for the full file.</td></tr>');
+  }catch(e){console.error(e);tb.innerHTML='<tr><td colspan="9" class="empty-state">Could not load: '+E(e.message||e)+'</td></tr>';}
+  window.loadAdminMidterm();
+};
+
+/* ---------- Admin: all mid-term ---------- */
+window.loadAdminMidterm=async function(){
+  const tb=$('admMidtermTable');if(!tb)return;
+  try{
+    await ensure();fillTop('admMid');
+    const cs=$('admMidClass');if(cs&&!cs.options.length)cs.innerHTML=opts(classes,'All classes');
+    const ss=$('admMidSubject');if(ss&&!ss.options.length)ss.innerHTML=opts(subjects,'All subjects');
+    tb.innerHTML='<tr><td colspan="8" class="empty-state">Loading...</td></tr>';
+    const ses=$('admMidSession').value,ter=$('admMidTerm').value,cl=$('admMidClass').value,sb=$('admMidSubject').value;
+    const rows=await pageAll(()=>{let q=supabaseClient.from('midterm_assessments').select('id,student_id,class_id,subject_id,term_id,session_id,major_test_score,teacher_id').not('major_test_score','is',null);
+      if(ses)q=q.eq('session_id',ses);if(ter)q=q.eq('term_id',ter);if(cl)q=q.eq('class_id',cl);if(sb)q=q.eq('subject_id',sb);return q.order('id');});
+    const sm=stuMap();
+    rows.sort((a,b)=>clsName(a.class_id).localeCompare(clsName(b.class_id))||nm(subjects,a.subject_id).localeCompare(nm(subjects,b.subject_id))||String(sm.get(String(a.student_id))?.name||'').localeCompare(String(sm.get(String(b.student_id))?.name||'')));
+    const shown=rows.slice(0,3000);
+    tb.innerHTML=shown.map(r=>'<tr><td><strong>'+E(sm.get(String(r.student_id))?.name||'-')+'</strong></td><td>'+E(clsName(r.class_id))+'</td><td>'+E(nm(subjects,r.subject_id))+'</td><td>'+E(nm(terms,r.term_id))+'</td><td>'+E(nm(sessions,r.session_id))+'</td><td style="text-align:center"><strong>'+r.major_test_score+'</strong></td><td>'+gradeCell(r.major_test_score)+'</td><td>'+E(nm(teachers,r.teacher_id))+'</td></tr>').join('')||'<tr><td colspan="8" class="empty-state">No mid-term scores found for this selection</td></tr>';
+    const c=$('admMidtermCount');if(c)c.textContent=rows.length+' mid-term record(s)'+(rows.length>shown.length?' (first '+shown.length+' shown - narrow the filters or use Download Scores)':'');
+  }catch(e){console.error(e);tb.innerHTML='<tr><td colspan="8" class="empty-state">Could not load: '+E(e.message||e)+'</td></tr>';}
 };
 })();
 </script>
