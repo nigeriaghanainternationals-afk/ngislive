@@ -2628,7 +2628,7 @@ Only the class teacher assigned to this class can save the comment.
 <h3><i class="fas fa-user-edit"></i> Edit Student</h3>
 <div class="form-group"><label>Full Name</label><input type="text" id="editStudentNameInput"></div>
 <div class="form-group"><label>Class</label><select id="editStudentClassInput"><option value="">-- Select Class --</option></select></div>
-<div class="form-group"><label>Gender</label><select id="editStudentGenderInput"><option value="">-- Select Gender --</option><option value="B">Boy</option><option value="G">Girl</option></select></div>
+<div class="form-group"><label>Gender</label><select id="editStudentGenderInput"><option value="">-- Select Gender --</option><option value="B">Male</option><option value="G">Female</option></select></div>
 <div class="form-group"><label>Student Login ID</label><input type="text" id="editStudentLoginIdInput" placeholder="e.g. NGIS/001/2024"></div>
 <div class="form-group"><label>Password</label><input type="text" id="editStudentPasswordInput" placeholder="Leave blank to keep current"></div>
 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('editStudentModal')">Cancel</button><button class="btn btn-primary" onclick="updateStudent()">Update Student</button></div>
@@ -8494,7 +8494,7 @@ window.regSetG=function(sid,g){const _s=students.find(x=>sameId(x.id,sid));if(_s
 window.ngisGenderApi={
   ready:async function(){await load();},
   get:function(s){return gender(s);},
-  set:async function(s,code){await load();const v=code==='B'?'Boy':code==='G'?'Girl':'';if(!v)return true;const k=S(s.id);st.gen[k]=v;pend.gen.set(k,{student_id:k,gender:v});mirror();await flush();return !st.local&&!pend.gen.has(k);}
+  set:async function(s,code){await load();const v=code==='B'?'Male':code==='G'?'Female':'';if(!v)return true;const k=S(s.id);st.gen[k]=v;pend.gen.set(k,{student_id:k,gender:v});mirror();await flush();return !st.local&&!pend.gen.has(k);}
 };
 window.regGDownload=function(){const c=$('regGClass').value,l=students.filter(s=>scopeClass(s.class_id)&&(!c||sameId(s.class_id,c))).sort((a,b)=>cName(a.class_id).localeCompare(cName(b.class_id))||S(a.name).localeCompare(S(b.name)));
   dl('NGIS_student_genders.csv','\ufeff'+[['student_id','student_name','class_name','gender'],...l.map(s=>[s.id,s.name,cName(s.class_id),gender(s)==='B'?'Boy':gender(s)==='G'?'Girl':''])].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv');};
@@ -12563,7 +12563,7 @@ window.tsRenderStudents=function(){
   const q=ngisNorm($('tsStuSearch')?.value);
   if(q)list=list.filter(s=>ngisMatch([s.name,s.student_login_id],q));
   const cnt=$('tsStuSearchCount');if(cnt)cnt.textContent=q?(list.length+' of '+total+' students'):'';
-  const gl=s=>{let g='';try{g=window.ngisGenderApi?window.ngisGenderApi.get(s):'';}catch(e){}return g==='B'?'Boy':g==='G'?'Girl':'<span style="color:#c0392b">Not set</span>';};
+  const gl=s=>{let g='';try{g=window.ngisGenderApi?window.ngisGenderApi.get(s):'';}catch(e){}return g==='B'?'Male':g==='G'?'Female':'<span style="color:#c0392b">Not set</span>';};
   tb.innerHTML=list.map((s,i)=>'<tr><td>'+(i+1)+'</td><td><strong>'+E(s.name||'')+'</strong></td><td>'+gl(s)+'</td><td><code>'+E(s.student_login_id||'-')+'</code></td><td>'+E(s.student_password||'-')+'</td><td><button type="button" class="btn btn-primary btn-sm edit-student-btn" data-student-id="'+E(s.id)+'"><i class="fas fa-edit"></i> Edit</button></td></tr>').join('')||'<tr><td colspan="6" class="empty-state">'+(cid?(q?'No student matches your search':'No students in this class yet'):'Choose a class')+'</td></tr>';
 };
 async function tsInit(){
