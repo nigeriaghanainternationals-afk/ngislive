@@ -2309,6 +2309,12 @@ Only the class teacher assigned to this class can save the comment.
 </div>
 <div id="sdStatus" style="margin-top:14px;font-size:.88rem;color:#555;"></div>
 </div>
+<div class="card" style="margin-top:20px">
+<div class="card-header"><h3><i class="fas fa-table"></i> Class Mid-Term Sheet (all subjects)</h3></div>
+<p style="font-size:.86rem;color:#555;margin:0 0 12px;">Choose a <strong>Class</strong>, <strong>Session</strong> and <strong>Term</strong> above, then show every subject's mid-term scores for the whole class and who entered them. Class teachers see all subjects of their own class; admin sees every class.</p>
+<button class="btn btn-primary" id="sdClassSheetBtn" onclick="sdShowClassSheet()"><i class="fas fa-eye"></i> Show Class Mid-Term Sheet</button>
+<div id="sdClassSheet" style="margin-top:14px"></div>
+</div>
 </div>
 
 <div id="backupAll" class="section hidden">
@@ -4759,22 +4765,63 @@ async function loadMidTermTeacherStudents(){
   const classTeacher=isCurrentUserClassTeacher(classId);
   const classStudents=students.filter(s=>sameId(s.class_id,classId)).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
 
-  // One query. The class teacher also needs the other subjects' rows so their comment shows whichever subject is selected.
-  let q=supabaseClient.from('midterm_assessments').select('id,student_id,subject_id,major_test_score,class_teacher_comment,updated_at')
-    .eq('class_id',classId).eq('term_id',termId).eq('session_id',sessionId);
-  if(!classTeacher)q=q.eq('subject_id',subjectId);
-  const {data,error}=await q.order('id');
+  // Read by student id (same way Save and the termly sync do) so a score is found even if its class_id is blank/old,
+  // and so the 1000-row limit can never hide the selected subject. The class teacher's comments come from a second read.
+  const ids=classStudents.map(x=>x.id);
+  const COLS='id,student_id,subject_id,major_test_score,class_teacher_comment,updated_at';
+  const {data,error}=await selectByStudentIds('midterm_assessments',COLS,{subject_id:subjectId,term_id:termId,session_id:sessionId},ids);
   if(seq!==_midTermLoadSeq)return;
   if(error){showToast('Mid-term table is not ready. Check the midterm_assessments table (subject_id column): '+error.message,'error');wrap?.classList.add('hidden');empty?.classList.remove('hidden');return;}
+  let commentRows=[];
+  if(classTeacher){
+    const cr=await selectByStudentIds('midterm_assessments',COLS,{term_id:termId,session_id:sessionId},ids);
+    if(seq!==_midTermLoadSeq)return;
+    commentRows=(cr.data||[]).filter(r=>r.class_teacher_comment);
+  }
 
+  // If a student has duplicate rows for this subject, show the one that actually holds a score (newest first).
+  const hasScore=r=>r.major_test_score!==null&&r.major_test_score!==undefined&&r.major_test_score!=='';
+  const better=(a,b)=>{if(!a)return true;if(hasScore(a)!==hasScore(b))return hasScore(b);return String(b.updated_at||'')>String(a.updated_at||'');};
   const map={},commentMap={};
-  (data||[]).forEach(r=>{
-    if(sameId(r.subject_id,subjectId)&&!map[r.student_id])map[r.student_id]=r;
-    if(r.class_teacher_comment){
-      const cur=commentMap[r.student_id];
-      if(!cur||String(r.updated_at||'')>String(cur.updated_at||''))commentMap[r.student_id]=r;
-    }
+  (data||[]).forEach(r=>{if(better(map[r.student_id],r))map[r.student_id]=r;});
+  commentRows.forEach(r=>{
+    const cur=commentMap[r.student_id];
+    if(!cur||String(r.updated_at||'')>String(cur.updated_at||''))commentMap[r.student_id]=r;
   });
+  // Same subject saved under a look-alike subject record (e.g. "HAUSA" vs "HAUSA LANGUAGE"): show those scores too.
+  const _norm=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const _selName=(subjects.find(x=>sameId(x.id,subjectId))||{}).name||'';
+  const _n0=_norm(_selName);
+  const twins=_n0.length<3?[]:subjects.filter(x=>{if(sameId(x.id,subjectId))return false;const n=_norm(x.name);return n.length>=3&&(n===_n0||n.startsWith(_n0)||_n0.startsWith(n));});
+  const twinHit=[];
+  for(const tw of twins){
+    const tr=await selectByStudentIds('midterm_assessments',COLS,{subject_id:tw.id,term_id:termId,session_id:sessionId},ids);
+    if(seq!==_midTermLoadSeq)return;
+    (tr.data||[]).forEach(r=>{if(hasScore(r)&&!(map[r.student_id]&&hasScore(map[r.student_id]))){map[r.student_id]={...r,_twin:tw.name};twinHit.push(tw.name);}});
+  }
+  // Nothing found at all: look for this subject's scores under another term / session and tell the teacher where they are.
+  let diag='';
+  if(!Object.values(map).some(hasScore)){
+    const subIds=[subjectId,...twins.map(x=>x.id)];let found=[];
+    for(const sid of subIds){
+      const dr=await selectByStudentIds('midterm_assessments',COLS,{subject_id:sid},ids);
+      if(seq!==_midTermLoadSeq)return;
+      found=found.concat((dr.data||[]).filter(r=>hasScore(r)));
+    }
+    if(found.length){
+      const g={};found.forEach(r=>{const k=r.term_id+'|'+r.session_id;g[k]=(g[k]||0)+1;});
+      const lab=k=>{const [t,se]=k.split('|');return ((terms.find(x=>sameId(x.id,t))||{}).name||'a term')+' / '+((sessions.find(x=>sameId(x.id,se))||{}).name||'a session');};
+      diag='Scores for this subject exist but under a different selection: '+Object.keys(g).map(k=>lab(k)+' ('+g[k]+' students)').join('; ')+'. Change the Term / Session above to see them.';
+    }else{
+      diag='No mid-term scores are stored for this class, subject, term and session yet. If a score was entered, it may have been saved against another class or teacher account.';
+    }
+  }
+  let box=document.getElementById('midTermDiagBox');
+  if(!box&&wrap){box=document.createElement('div');box.id='midTermDiagBox';box.className='ts-note';box.style.cssText='margin-bottom:12px;border-left-color:#c41e3a';wrap.insertBefore(box,wrap.firstChild);}
+  if(box){
+    const msg=diag||(twinHit.length?'Some scores below were saved under a similar subject name ('+[...new Set(twinHit)].join(', ')+'). Press Save to store them under '+_selName+'.':'');
+    box.textContent=msg;box.style.display=msg?'':'none';
+  }
   const subjectName=subjects.find(s=>sameId(s.id,subjectId))?.name||'';
   document.getElementById('midTermTeacherTableBody').innerHTML=classStudents.map((s,i)=>{
     const r=map[s.id]||{},g=midTermGrade(r.major_test_score);
@@ -4824,7 +4871,9 @@ async function saveMidTermTeacherRecords(){
     // 2) One lookup for every existing record of this subject/term/session.
     const {data:existingRows,error:findError}=await selectByStudentIds('midterm_assessments','id,student_id,major_test_score,class_teacher_comment',{subject_id:subjectId,term_id:termId,session_id:sessionId},entries.map(e=>e.s.id));
     if(findError){showToast('Error checking mid-term records: '+findError.message,'error');return;}
-    const existingMap={};(existingRows||[]).forEach(r=>{if(!existingMap[r.student_id])existingMap[r.student_id]=r;});
+    const existingMap={};
+    const _has=r=>r.major_test_score!==null&&r.major_test_score!==undefined&&r.major_test_score!=='';
+    (existingRows||[]).forEach(r=>{const c=existingMap[r.student_id];if(!c||(!_has(c)&&_has(r)))existingMap[r.student_id]=r;});
 
     // 3) New / changed / unchanged. A blank score on an existing record clears it.
     const now=new Date().toISOString();
@@ -7697,18 +7746,42 @@ window.tsEntrySave=async function(){
 };
 
 /* ---------- Report card ---------- */
+/* A subject belongs on a class's report only if it still exists AND is assigned to that class
+   (Admin > Subjects > Assign). Orphan score rows (deleted / unassigned subjects) used to print as "Subject". */
+function subjectOkForClass(classId,subjectId){
+  const sub=(typeof subjects!=='undefined'?subjects:[]).find(x=>sameId(x.id,subjectId));
+  if(!sub)return false;
+  const ids=(sub.class_ids||[]).map(String);
+  if(ids.length)return ids.includes(String(classId));
+  const secs=sub.sections||[];
+  if(secs.length){
+    const cls=(typeof classes!=='undefined'?classes:[]).find(x=>sameId(x.id,classId));
+    try{const k=ngisSectionOfClass(cls&&cls.name);if(k)return secs.includes(k);}catch(_){}
+  }
+  return true;
+}
+window.ngisSubjectOkForClass=subjectOkForClass;
 async function classData(classId,termId,sessionId){
-  const {data,error}=await supabaseClient.from('term_scores').select('*').eq('class_id',classId).eq('term_id',termId).eq('session_id',sessionId);
-  if(error)throw error;return data||[];
+  let all=[],from=0;
+  for(;;){
+    const {data,error}=await supabaseClient.from('term_scores').select('*').eq('class_id',classId).eq('term_id',termId).eq('session_id',sessionId).order('id').range(from,from+999);
+    if(error)throw error;
+    all=all.concat(data||[]);
+    if(!data||data.length<1000)break;
+    from+=1000;
+  }
+  return all.filter(r=>subjectOkForClass(classId,r.subject_id));
 }
 function buildReport(student,all,termId,sessionId,classId){
   const SC=scheme(classId);const mine=all.filter(r=>sameId(r.student_id,student.id));
   const sa={};all.forEach(r=>{(sa[r.subject_id]=sa[r.subject_id]||[]).push(total(r));});
   const term=terms.find(x=>sameId(x.id,termId)),sess=sessions.find(x=>sameId(x.id,sessionId)),cls=classes.find(x=>sameId(x.id,classId));
   let sum=0;
+  const subName=id=>subjects.find(s=>sameId(s.id,id))?.name||'';
+  mine.sort((a,b)=>subName(a.subject_id).localeCompare(subName(b.subject_id)));
   const body=mine.map(r=>{const t=total(r),g=grade(t);sum+=t;const av=sa[r.subject_id]?r2(sa[r.subject_id].reduce((a,b)=>a+b,0)/sa[r.subject_id].length):'-';
     const c='padding:6px 4px;border:1px solid #ddd;text-align:center;font-size:12px';
-    return '<tr><td style="'+c+';text-align:left">'+esc(subjects.find(s=>sameId(s.id,r.subject_id))?.name||'Subject')+'</td><td style="'+c+'">'+(num(r.test1_manual)!==null||num(r.test1)!==null?t1eff(r):'-')+'</td><td style="'+c+'">'+(r.test2??'-')+'</td>'+(SC.senior?'':'<td style="'+c+'">'+(r.project??'-')+'</td>')+'<td style="'+c+'">'+r2(eff(r))+'</td><td style="'+c+'">'+(r.exam??'-')+'</td><td style="'+c+';font-weight:700">'+t+'</td><td style="'+c+';font-weight:700">'+g[0]+'</td><td style="'+c+'">'+av+'</td><td style="'+c+';text-align:left">'+g[1]+'</td></tr>';}).join('');
+    return '<tr><td style="'+c+';text-align:left">'+esc(subName(r.subject_id))+'</td><td style="'+c+'">'+(num(r.test1_manual)!==null||num(r.test1)!==null?t1eff(r):'-')+'</td><td style="'+c+'">'+(r.test2??'-')+'</td>'+(SC.senior?'':'<td style="'+c+'">'+(r.project??'-')+'</td>')+'<td style="'+c+'">'+r2(eff(r))+'</td><td style="'+c+'">'+(r.exam??'-')+'</td><td style="'+c+';font-weight:700">'+t+'</td><td style="'+c+';font-weight:700">'+g[0]+'</td><td style="'+c+'">'+av+'</td><td style="'+c+';text-align:left">'+g[1]+'</td></tr>';}).join('');
   const n=mine.length,avg=n?r2(sum/n):0,og=grade(avg);
   const th='background:#1a5f2a;color:#fff;padding:7px 4px;font-size:11px;border:1px solid #1a5f2a';
   const rem=avg>=70?'An excellent performance. Keep it up!':avg>=50?'A good effort. More focus will bring better results.':'Needs serious improvement. Extra effort and parental support are advised.';
@@ -8001,7 +8074,7 @@ const gb=g=>'<b style="color:'+(COL[g]||'#333')+'">'+g+'</b>';
 const arrow=d=>d>0?'<b style="color:#2d8a42">▲ +'+r2(d)+'</b>':d<0?'<b style="color:#c41e3a">▼ '+r2(d)+'</b>':'<b style="color:#888">● 0</b>';
 const LAST={};
 async function pull(build){let all=[],from=0;for(;;){const {data,error}=await build().range(from,from+999);if(error)throw error;all=all.concat(data||[]);if(!data||data.length<1000)break;from+=1000;}return all;}
-const rowsFor=(c,t,s)=>pull(()=>{let q=supabaseClient.from('term_scores').select('*').eq('class_id',c).eq('session_id',s);if(t)q=q.eq('term_id',t);return q;});
+const rowsFor=(c,t,s)=>pull(()=>{let q=supabaseClient.from('term_scores').select('*').eq('class_id',c).eq('session_id',s);if(t)q=q.eq('term_id',t);return q.order('id');}).then(rs=>rs.filter(r=>window.ngisSubjectOkForClass(c,r.subject_id)));
 function byStudent(rows){const m={};rows.forEach(r=>{const o=m[r.student_id]=m[r.student_id]||{subj:{},sum:0,n:0};const t=total(r);o.subj[r.subject_id]=t;o.sum+=t;o.n++;});Object.values(m).forEach(o=>{o.avg=o.n?r2(o.sum/o.n):0;o.g=grade(o.avg)[0];});return m;}
 const studs=ids=>ids.map(id=>students.find(x=>sameId(x.id,id))||{id,name:'Student'}).sort(byName);
 const subsOf=rows=>[...new Set(rows.map(r=>r.subject_id))].sort((a,b)=>subN(a).localeCompare(subN(b)));
@@ -8111,6 +8184,7 @@ window.tsGRun=async function(){
     let rows=await pull(()=>supabaseClient.from('term_scores').select('*').eq('student_id',sid));
     if(isStu()){const ids=[...new Set(rows.map(r=>r.class_id).filter(Boolean))];const {data}=ids.length?await supabaseClient.from('result_publications').select('class_id,term_id,session_id').eq('is_published',true).in('class_id',ids):{data:[]};
       rows=rows.filter(r=>(data||[]).some(p=>sameId(p.class_id,r.class_id)&&sameId(p.term_id,r.term_id)&&sameId(p.session_id,r.session_id)));}
+    rows=rows.filter(r=>window.ngisSubjectOkForClass(r.class_id,r.subject_id));
     $('tsGOut').innerHTML=progressHtml(st,rows);
   }catch(e){showToast(tsErr(e),'error');}
 };
@@ -15333,13 +15407,15 @@ window.sdDownloadMid=async function(){
     const clsList=classScope(sel).slice().sort(nameKey);
     const subIds=subs.map(s=>s.id),clsIds=clsList.map(c=>c.id);
     if(!clsIds.length){status('No class available.',true);return;}
-    const rows=await fetchAllRows(()=>supabaseClient.from('midterm_assessments').select('id,student_id,class_id,subject_id,major_test_score').eq('term_id',sel.termId).eq('session_id',sel.sessionId).in('subject_id',subIds).in('class_id',clsIds).order('id'));
+    const rows=await fetchAllRows(()=>supabaseClient.from('midterm_assessments').select('id,student_id,class_id,subject_id,major_test_score').eq('term_id',sel.termId).eq('session_id',sel.sessionId).in('class_id',clsIds).order('id'));
     if(!rows.length){status('No mid-term scores have been entered for this term yet.',true);return;}
+    const fullAccess=c=>isAdm()||(typeof ngisIsDesignatedClassTeacher==='function'&&ngisIsDesignatedClassTeacher(c.id));
     const wb=XLSX.utils.book_new();let sheets=0;
     for(const cls of clsList){
       const mine=rows.filter(r=>same(r.class_id,cls.id)&&r.major_test_score!==null&&r.major_test_score!==undefined);
       if(!mine.length)continue;
-      const subCols=subs.filter(s=>mine.some(r=>same(r.subject_id,s.id))).sort(nameKey);
+      const pool=sel.subjectId?subs:(fullAccess(cls)?(subjects||[]):subs);
+      const subCols=pool.filter(s=>mine.some(r=>same(r.subject_id,s.id))).sort(nameKey);
       const ids=new Set((students||[]).filter(s=>same(s.class_id,cls.id)).map(s=>String(s.id)));
       mine.forEach(r=>ids.add(String(r.student_id)));
       const stu=(students||[]).filter(s=>ids.has(String(s.id))).sort(nameKey);
@@ -15500,6 +15576,54 @@ window.loadAdminMidterm=async function(){
     tb.innerHTML=shown.map(r=>'<tr><td><strong>'+E(sm.get(String(r.student_id))?.name||'-')+'</strong></td><td>'+E(clsName(r.class_id))+'</td><td>'+E(nm(subjects,r.subject_id))+'</td><td>'+E(nm(terms,r.term_id))+'</td><td>'+E(nm(sessions,r.session_id))+'</td><td style="text-align:center"><strong>'+r.major_test_score+'</strong></td><td>'+gradeCell(r.major_test_score)+'</td><td>'+E(nm(teachers,r.teacher_id))+'</td></tr>').join('')||'<tr><td colspan="8" class="empty-state">No mid-term scores found for this selection</td></tr>';
     const c=$('admMidtermCount');if(c)c.textContent=rows.length+' mid-term record(s)'+(rows.length>shown.length?' (first '+shown.length+' shown - narrow the filters or use Download Scores)':'');
   }catch(e){console.error(e);tb.innerHTML='<tr><td colspan="8" class="empty-state">Could not load: '+E(e.message||e)+'</td></tr>';}
+};
+})();
+</script>
+<script>
+/* ===== Class-wide mid-term sheet: every subject, every teacher, with entry status ===== */
+(function(){
+const $=id=>document.getElementById(id),E=v=>escapeHtml(v==null?'':v);
+const same=(a,b)=>String(a)===String(b);
+const isAdm=()=>currentUser?.role==='admin';
+async function pageAll(build){let out=[],i=0;for(let n=0;n<60;n++){const {data,error}=await build().range(i,i+999);if(error)throw error;out=out.concat(data||[]);if(!data||data.length<1000)break;i+=1000;}return out;}
+window.sdShowClassSheet=async function(){
+  const box=$('sdClassSheet');if(!box)return;
+  const classId=$('sdClass').value,termId=$('sdTerm').value,sessionId=$('sdSession').value;
+  if(!classId){box.innerHTML='<div style="color:#c0392b">Select one class first (not "All classes").</div>';return;}
+  if(!termId||!sessionId){box.innerHTML='<div style="color:#c0392b">Select a session and a term first.</div>';return;}
+  const cls=(classes||[]).find(c=>same(c.id,classId));
+  const full=isAdm()||(typeof ngisIsDesignatedClassTeacher==='function'&&ngisIsDesignatedClassTeacher(classId));
+  box.innerHTML='<i class="fas fa-spinner fa-spin"></i> Loading...';
+  try{
+    let mySub=null;
+    if(!full){mySub=new Set(await getCurrentTeacherSubjectIds(true));}
+    let rows=await pageAll(()=>supabaseClient.from('midterm_assessments').select('id,student_id,class_id,subject_id,term_id,session_id,major_test_score,teacher_id').eq('class_id',classId).eq('term_id',termId).eq('session_id',sessionId).order('id'));
+    if(mySub)rows=rows.filter(r=>mySub.has(String(r.subject_id)));
+    rows=rows.filter(r=>r.major_test_score!==null&&r.major_test_score!==undefined);
+    const stu=(students||[]).filter(s=>same(s.class_id,classId)).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'}));
+    if(!rows.length){
+      // diagnose: are there scores for this class saved under another term/session?
+      let other=[];
+      try{other=await pageAll(()=>{let q=supabaseClient.from('midterm_assessments').select('id,subject_id,term_id,session_id,major_test_score').eq('class_id',classId).not('major_test_score','is',null);return q.order('id');});}catch(e){}
+      if(mySub)other=other.filter(r=>mySub.has(String(r.subject_id)));
+      const combos={};other.forEach(r=>{const k=(terms.find(t=>same(t.id,r.term_id))?.name||'?')+' / '+(sessions.find(s=>same(s.id,r.session_id))?.name||'?');combos[k]=(combos[k]||0)+1;});
+      const list=Object.entries(combos).map(([k,n])=>'<li>'+E(k)+': '+n+' score(s)</li>').join('');
+      box.innerHTML='<div style="padding:12px;background:#fff7e6;border-radius:8px">No mid-term scores for <strong>'+E(cls?.name||'')+'</strong> under the selected term and session.'+(list?'<br>Scores for this class exist under:<ul style="margin:6px 0 0 18px">'+list+'</ul>Pick that term/session above.':'<br>No mid-term scores have been saved for this class at all. Teachers must open <em>Mid-Term Assessment</em>, enter scores and press Save.')+'</div>';
+      return;
+    }
+    const subIds=[...new Set(rows.map(r=>String(r.subject_id)))];
+    const subs=subIds.map(id=>(subjects||[]).find(s=>same(s.id,id))||{id,name:'Subject'}).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    const bySub={};subs.forEach(s=>bySub[s.id]={});rows.forEach(r=>{bySub[r.subject_id][r.student_id]=r;});
+    const tchOf=sid=>{const r=rows.find(x=>same(x.subject_id,sid));return (teachers||[]).find(t=>same(t.id,r?.teacher_id))?.name||'-';};
+    let head='<tr><th>#</th><th>Student</th>'+subs.map(s=>'<th style="text-align:center">'+E(s.name)+'<div style="font-weight:400;font-size:.72rem;opacity:.85">'+E(tchOf(s.id))+'</div></th>').join('')+'<th style="text-align:center">Total</th><th style="text-align:center">Average /20</th></tr>';
+    let body=stu.map((s,i)=>{
+      let tot=0,n=0;
+      const cells=subs.map(sb=>{const r=bySub[sb.id][s.id];if(!r)return '<td style="text-align:center;color:#c0392b">-</td>';const v=Number(r.major_test_score);tot+=v;n++;return '<td style="text-align:center">'+v+'</td>';}).join('');
+      return '<tr><td>'+(i+1)+'</td><td><strong>'+E(s.name)+'</strong></td>'+cells+'<td style="text-align:center"><strong>'+(n?tot:'-')+'</strong></td><td style="text-align:center">'+(n?(tot/n).toFixed(1):'-')+'</td></tr>';
+    }).join('');
+    const entered='<tr style="background:#f1f6f2"><td></td><td><em>Scores entered</em></td>'+subs.map(sb=>'<td style="text-align:center"><em>'+Object.keys(bySub[sb.id]).length+' / '+stu.length+'</em></td>').join('')+'<td></td><td></td></tr>';
+    box.innerHTML='<div style="font-size:.88rem;margin-bottom:8px"><strong>'+E(cls?.name||'')+'</strong> - '+E(terms.find(t=>same(t.id,termId))?.name||'')+', '+E(sessions.find(s=>same(s.id,sessionId))?.name||'')+(full?'':' (your subjects only)')+'</div><div class="table-container"><table><thead>'+head+'</thead><tbody>'+body+entered+'</tbody></table></div><div style="font-size:.8rem;color:#666;margin-top:6px">A red "-" means no score has been saved for that student in that subject. Subjects that no teacher has saved yet do not appear as columns.</div>';
+  }catch(e){console.error(e);box.innerHTML='<div style="color:#c0392b">Could not load: '+E(e.message||e)+'</div>';}
 };
 })();
 </script>
