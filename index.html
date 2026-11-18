@@ -1550,7 +1550,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <div class="form-group"><label>Term</label><select id="caTerm" onchange="caAutoLoad()"></select></div>
 <div class="form-group"><label>Session</label><select id="caSession" onchange="caAutoLoad()"></select></div>
 </div>
-<div class="ts-note"><b>How it works:</b> Test /10 + Take Home Assignment /10 = <b>1st C.A /20</b> &middot; Quiz /5 + Debate /5 + Project /10 = <b>2nd C.A /20</b> &middot; Affective /10 (Attendance, Appearance, Honesty, Punctuality, Relationship with Others, 2 each) + Psychomotor /10 (Note Copying /5, Practical/Project /5) = <b>Proj/Ass /20</b> &middot; Exam /40. When you press <b>Save &amp; Push to Report Card</b>, the record is stored in the database and the totals are sent straight to the termly report card (1st C.A &rarr; Test 1, 2nd C.A &rarr; Test 2, Psychomotor &rarr; Project, Affective &rarr; Assignment). <br><b>Senior Secondary classes</b> use the same page with their own format: Test 1 /10 + Test 2 /10 + Assignment/Project /10 + Exam /70, pushed to Test 1, Test 2, Assignment/Project and Exam on the report card.</div>
+<details class="ts-note ca-how"><summary style="cursor:pointer"><b>How it works</b> <span style="font-weight:400;color:#666">(tap to read)</span></summary><b>How it works:</b> Test /10 + Take Home Assignment /10 = <b>1st C.A /20</b> &middot; Quiz /5 + Debate /5 + Project /10 = <b>2nd C.A /20</b> &middot; Affective /10 (Attendance, Appearance, Honesty, Punctuality, Relationship with Others, 2 each) + Psychomotor /10 (Note Copying /5, Practical/Project /5) = <b>Proj/Ass /20</b> &middot; Exam /40. When you press <b>Save &amp; Push to Report Card</b>, the record is stored in the database and the totals are sent straight to the termly report card (1st C.A &rarr; Test 1, 2nd C.A &rarr; Test 2, Psychomotor &rarr; Project, Affective &rarr; Assignment). <br><b>Senior Secondary classes</b> use the same page with their own format: Test 1 /10 + Test 2 /10 + Assignment/Project /10 + Exam /70, pushed to Test 1, Test 2, Assignment/Project and Exam on the report card.</details>
 <input type="file" id="caFile" accept=".xlsx,.xls" style="display:none" onchange="caUpload(this)">
 <div id="caSetup"></div>
 <div id="caWrap"><div class="empty-state">Choose class, subject, term and session to open the record.</div></div>
@@ -12997,6 +12997,37 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 .ca-grid input.ca-bad{border-color:#c41e3a;background:#fff0f2}
 .ca-grid td.ca-calc{background:#f1f7f2;font-weight:700}
 .ca-grid td.ca-tot{background:#e4f1e7;font-weight:800;color:#1a5f2a}
+/* ---- General C.A: phone / landscape friendly ---- */
+.ca-grid thead th.ca-name{z-index:5}
+.ca-grid thead tr:nth-child(2) th{top:var(--ca-h1,28px)}
+.ca-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px}
+.ca-bar .btn{white-space:nowrap}
+.ca-bar .ca-title{flex:1;min-width:120px;font-weight:700;color:#1a5f2a;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ca-bar .ca-fs-only{display:none}
+.ca-rot{display:none;background:#fff4d6;color:#8a5a00;border:1px solid #f0d48a;border-radius:8px;padding:8px 10px;font-size:.84rem;font-weight:700;margin:0 0 8px;text-align:center}
+.ca-grid tr.ca-rowfocus td{background:#fffbe6}
+.ca-grid tr.ca-rowfocus td.ca-name{background:#fff3c4}
+@media (max-width:700px){
+  #caRecord .card{padding:12px}
+  #caRecord details.ca-how{font-size:.82rem}
+  .ca-grid td.ca-name,.ca-grid th.ca-name{min-width:112px;max-width:128px;white-space:normal;font-size:.78rem;line-height:1.2}
+  .ca-grid input{width:62px;height:40px;font-size:1rem}
+  .ca-scroll{max-height:60vh}
+}
+#caWrap.ca-full{position:fixed;inset:0;z-index:2147483000;background:#fff;display:flex;flex-direction:column;padding:6px 8px;padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right));box-sizing:border-box}
+#caWrap.ca-full .ca-bar .ca-fs-only{display:inline-flex}
+#caWrap.ca-full .ca-bar .ca-norm-only{display:none}
+#caWrap.ca-full .ca-bar{margin:0 0 6px;flex-wrap:nowrap}
+#caWrap.ca-full .ca-bar .btn{padding:8px 12px;font-size:.85rem}
+#caWrap.ca-full .ca-scroll{flex:1;max-height:none;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#caWrap.ca-full .ca-grid{font-size:.9rem;margin-bottom:55vh}
+#caWrap.ca-full .ca-grid td.ca-name,#caWrap.ca-full .ca-grid th.ca-name{min-width:150px;max-width:190px;white-space:normal;font-size:.85rem}
+#caWrap.ca-full .ca-grid input{width:74px;height:44px;font-size:1.05rem}
+#caWrap.ca-full .ts-btnrow{display:none}
+@media (orientation:portrait){#caWrap.ca-full .ca-rot{display:block}}
+@media (orientation:landscape) and (max-height:520px){#caWrap.ca-full .ca-grid td,#caWrap.ca-full .ca-grid th{padding:2px 4px}#caWrap.ca-full .ca-grid input{height:36px;width:66px;font-size:1rem}#caWrap.ca-full .ca-grid thead th{font-size:.66rem}#caWrap.ca-full .ca-bar .btn{padding:5px 10px}}
+body.ca-lock{overflow:hidden!important}
+#toastContainer{z-index:2147483647!important}
 </style>
 <script>
 /* ===== GENERAL C.A RECORD: portal entry -> database (ca_records) -> termly report card (term_scores) ===== */
@@ -13078,8 +13109,9 @@ window.caLoad=async function(){
     return '<tr data-sid="'+x.id+'"><td class="ca-name">'+(i+1)+'. '+esc(x.name)+'</td>'+CUR.f.map(f=>cell(f,x,r)).join('')+
      calc(x)+
      '<td>'+inp('exam',x.id,r.exam,CUR.exam)+'</td><td class="ca-tot" id="ca_tot_'+x.id+'">0</td></tr>';}).join('')+'</tbody>';
-  $('caWrap').innerHTML='<div class="ca-scroll"><table class="ca-grid"'+(CUR.senior?' style="min-width:0"':'')+'>'+head+body+'</table></div><div class="ts-btnrow"><button class="btn btn-primary" onclick="caSave()"><i class="fas fa-cloud-upload-alt"></i> Save &amp; Push to Report Card</button><button class="btn btn-success" onclick="caDownload()"><i class="fas fa-file-excel"></i> Download Excel Sheet</button><button class="btn btn-sm btn-primary" onclick="document.getElementById(\'caFile\').click()"><i class="fas fa-upload"></i> Upload Filled Sheet</button><button class="btn btn-sm" style="background:#eee;color:#333" onclick="caLoad()"><i class="fas fa-sync"></i> Reload</button></div>';
+  $('caWrap').innerHTML=caBar()+'<div class="ca-scroll"><table class="ca-grid"'+(CUR.senior?' style="min-width:0"':'')+'>'+head+body+'</table></div><div class="ts-btnrow"><button class="btn btn-primary" onclick="caSave()"><i class="fas fa-cloud-upload-alt"></i> Save &amp; Push to Report Card</button><button class="btn btn-success" onclick="caDownload()"><i class="fas fa-file-excel"></i> Download Excel Sheet</button><button class="btn btn-sm btn-primary" onclick="document.getElementById(\'caFile\').click()"><i class="fas fa-upload"></i> Upload Filled Sheet</button><button class="btn btn-sm" style="background:#eee;color:#333" onclick="caLoad()"><i class="fas fa-sync"></i> Reload</button></div>';
   list.forEach(x=>caRow(x.id));
+  caFixHead();
 };
 function sums(sid){
   const v=k=>num($('ca_'+k+'_'+sid)?.value);
@@ -13087,6 +13119,43 @@ function sums(sid){
   CUR.f.forEach(f=>{const x=v(f.k);if(x!==null){g[f.g]+=x;has[f.g]=true;}});
   return{g,has,exam:v('exam')};
 }
+
+/* ---- phone / landscape helpers ---- */
+const caTitle=()=>{const a=$('caClass'),b=$('caSubject');const n=e=>e&&e.selectedIndex>0?e.options[e.selectedIndex].text:'';return [n(a),n(b)].filter(Boolean).join(' - ');};
+window.caBar=function(){
+  return '<div class="ca-bar"><button class="btn btn-sm btn-primary ca-norm-only" onclick="caFull(true)"><i class="fas fa-expand"></i> Full screen / landscape</button>'+
+   '<span class="ca-norm-only" style="font-size:.78rem;color:#666">Tip: use this on a phone, then turn it sideways.</span>'+
+   '<span class="ca-title ca-fs-only">'+esc(caTitle())+'</span>'+
+   '<button class="btn btn-sm btn-primary ca-fs-only" onclick="caSave()"><i class="fas fa-cloud-upload-alt"></i> Save &amp; Push</button>'+
+   '<button class="btn btn-sm ca-fs-only" style="background:#eee;color:#333" onclick="caFull(false)"><i class="fas fa-compress"></i> Close</button></div>'+
+   '<div class="ca-rot"><i class="fas fa-sync-alt"></i> Turn your phone sideways (landscape) for a wider sheet</div>';
+};
+window.caFixHead=function(){
+  const tb=document.querySelector('#caWrap .ca-grid');if(!tb)return;
+  const r=tb.querySelector('thead tr');if(r)tb.style.setProperty('--ca-h1',r.getBoundingClientRect().height+'px');
+};
+window.caFull=async function(on,fromEvent){
+  const w=$('caWrap');if(!w)return;
+  w.classList.toggle('ca-full',!!on);document.body.classList.toggle('ca-lock',!!on);
+  if(on){
+    try{if(w.requestFullscreen)await w.requestFullscreen();}catch(e){}
+    try{if(screen.orientation&&screen.orientation.lock)await screen.orientation.lock('landscape');}catch(e){}
+  }else if(!fromEvent){
+    try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}
+    try{if(document.fullscreenElement)await document.exitFullscreen();}catch(e){}
+  }else{try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock();}catch(e){}}
+  setTimeout(caFixHead,60);setTimeout(caFixHead,400);
+};
+document.addEventListener('fullscreenchange',()=>{const w=$('caWrap');if(w&&w.classList.contains('ca-full')&&!document.fullscreenElement)window.caFull(false,true);});
+window.addEventListener('resize',()=>setTimeout(caFixHead,80));
+window.addEventListener('orientationchange',()=>setTimeout(caFixHead,300));
+document.addEventListener('focusin',e=>{const t=e.target;if(!t||!t.matches||!t.matches('.ca-grid input'))return;
+  document.querySelectorAll('.ca-grid tr.ca-rowfocus').forEach(r=>r.classList.remove('ca-rowfocus'));
+  const tr=t.closest('tr');if(tr)tr.classList.add('ca-rowfocus');
+  setTimeout(()=>{try{t.scrollIntoView({block:'center',inline:'center'});}catch(_){}},250);});
+document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;const t=e.target;if(!t||!t.matches||!t.matches('.ca-grid input'))return;
+  const tr=t.closest('tr'),idx=[...tr.querySelectorAll('input')].indexOf(t),nx=tr.nextElementSibling;
+  if(nx){const n=nx.querySelectorAll('input')[idx];if(n){n.focus();if(n.select)n.select();e.preventDefault();}}});
 window.caRow=function(sid){
   CUR.f.concat([{k:'exam',m:CUR.exam}]).forEach(f=>{const el=$('ca_'+f.k+'_'+sid);if(!el)return;const x=num(el.value);el.classList.toggle('ca-bad',x!==null&&(!Number.isFinite(x)||x<0||x>f.m));});
   const {g,exam}=sums(sid);
