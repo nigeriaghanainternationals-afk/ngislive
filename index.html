@@ -2343,7 +2343,7 @@ Only the class teacher assigned to this class can save the comment.
 
 <div id="weeksMgmt" class="section hidden">
 <div class="card">
-<div class="card-header"><h3><i class="fas fa-calendar-week"></i> Week Management</h3><button class="btn btn-primary btn-sm" onclick="openModal('weekModal')"><i class="fas fa-plus"></i> Add Week</button></div>
+<div class="card-header"><h3><i class="fas fa-calendar-week"></i> Week Management</h3><button class="btn btn-primary btn-sm" onclick="openWeekModal()"><i class="fas fa-plus"></i> Add Week</button></div>
 <div class="table-container"><table><thead><tr><th>Week Name</th><th>Start Date</th><th>End Date</th><th>Actions</th></tr></thead><tbody id="weeksTable"></tbody></table></div>
 </div>
 </div>
@@ -2615,13 +2615,13 @@ Only the class teacher assigned to this class can save the comment.
 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('classModal')">Cancel</button><button class="btn btn-primary" onclick="saveClass()">Save Class</button></div>
 </div>
 <div class="modal hidden" id="weekModal">
-<h3><i class="fas fa-calendar-week"></i> Add New Week</h3>
+<h3><i class="fas fa-calendar-week"></i> <span id="weekModalTitle">Add New Week</span></h3>
 <div class="form-group"><label>Week Name</label><input type="text" id="weekNameInput" placeholder="e.g. Week 1 - First Term"></div>
 <div class="form-group"><label>Term</label><select id="weekTermInput"><option value="">-- Select Term --</option></select></div>
 <div class="form-group"><label>Session</label><select id="weekSessionInput"><option value="">-- Select Session --</option></select></div>
 <div class="form-group"><label>Start Date</label><input type="date" id="weekStartInput"></div>
 <div class="form-group"><label>End Date</label><input type="date" id="weekEndInput"></div>
-<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('weekModal')">Cancel</button><button class="btn btn-primary" onclick="saveWeek()">Save Week</button></div>
+<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;"><button class="btn" style="background:#eee;color:#333;" onclick="closeModal('weekModal')">Cancel</button><button class="btn btn-primary" onclick="saveWeek()" id="weekSaveBtn">Save Week</button></div>
 </div>
 <div class="modal hidden" id="subjectModal" style="max-width:640px">
 <h3><i class="fas fa-book"></i> Add New Subject</h3>
@@ -3614,7 +3614,7 @@ return '<tr><td><strong>'+c.name+'</strong></td><td>'+count+' students</td><td><
 
 function renderWeeksTable(){
 const tbody=document.getElementById('weeksTable');
-tbody.innerHTML=weeks.map(w=>'<tr><td><strong>'+w.name+'</strong></td><td>'+(w.start_date||'-')+'</td><td>'+(w.end_date||'-')+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteWeek('+"'"+w.id+"'"+')"><i class="fas fa-trash"></i></button></td></tr>').join('')||'<tr><td colspan="4" class="empty-state">No weeks yet</td></tr>';
+tbody.innerHTML=weeks.map(w=>'<tr><td><strong>'+w.name+'</strong></td><td>'+(w.start_date||'-')+'</td><td>'+(w.end_date||'-')+'</td><td><button class="btn btn-primary btn-sm" style="margin-right:5px" title="Edit week" onclick="openWeekModal('+"'"+w.id+"'"+')"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-sm" onclick="deleteWeek('+"'"+w.id+"'"+')"><i class="fas fa-trash"></i></button></td></tr>').join('')||'<tr><td colspan="4" class="empty-state">No weeks yet</td></tr>';
 }
 
 function renderSubjectsTable(){
@@ -5785,6 +5785,39 @@ if(!tbody)return;
 tbody.innerHTML=sessions.map(s=>'<tr><td><strong>'+s.name+'</strong></td><td>'+(s.is_active?'<span class="grade-badge grade-a-plus">ACTIVE</span>':'<span class="grade-badge grade-c">Inactive</span>')+'</td><td><button class="btn btn-primary btn-sm" onclick="setActiveSession('+"'"+s.id+"'"+')" style="margin-right:5px"><i class="fas fa-check"></i> Set Active</button><button class="btn btn-danger btn-sm" onclick="deleteSession('+"'"+s.id+"'"+')"><i class="fas fa-trash"></i></button></td></tr>').join('')||'<tr><td colspan="3" class="empty-state">No sessions yet</td></tr>';
 }
 
+let editingWeekId=null;
+function openWeekModal(id){
+  editingWeekId=id||null;
+  try{populateDropdowns();}catch(e){}
+  const set=(i,v)=>{const el=document.getElementById(i);if(el)el.value=v||'';};
+  const w=id?weeks.find(x=>String(x.id)===String(id)):null;
+  if(id&&!w){showToast('Week not found. Refresh and try again.','error');editingWeekId=null;return;}
+  set('weekNameInput',w?w.name:'');
+  set('weekTermInput',w?w.term_id:'');
+  set('weekSessionInput',w?w.session_id:'');
+  set('weekStartInput',w&&w.start_date?String(w.start_date).slice(0,10):'');
+  set('weekEndInput',w&&w.end_date?String(w.end_date).slice(0,10):'');
+  const t=document.getElementById('weekModalTitle');if(t)t.textContent=w?'Edit Week':'Add New Week';
+  const b=document.getElementById('weekSaveBtn');if(b)b.textContent=w?'Update Week':'Save Week';
+  openModal('weekModal');
+}
+async function updateWeek(id,name,termId,sessionId,start,end){
+  const dup=await supabaseClient.from('weeks').select('id,name').ilike('name',name).neq('id',id).limit(50);
+  if(!dup.error&&(dup.data||[]).some(r=>{const o=weeks.find(x=>String(x.id)===String(r.id));return !o||((o.term_id||'')===termId&&(o.session_id||'')===sessionId);})){
+    showToast('Another week with this name already exists.','error');return;
+  }
+  const full={name,start_date:start||null,end_date:end||null,term_id:termId||null,session_id:sessionId||null};
+  let r=await supabaseClient.from('weeks').update(full).eq('id',id).select();
+  if(r.error&&/term_id|session_id|column|schema cache/i.test(r.error.message||'')){
+    r=await supabaseClient.from('weeks').update({name,start_date:start||null,end_date:end||null}).eq('id',id).select();
+  }
+  if(r.error){showToast('Could not update week: '+r.error.message,'error');return;}
+  if(!r.data||!r.data.length){showToast('Week was not updated. Check the Supabase UPDATE policy (RLS) for the weeks table.','error');return;}
+  showToast('Week updated successfully','success');
+  closeModal('weekModal');
+  editingWeekId=null;
+  await loadWeeks();
+}
 async function saveWeek(){
   if(currentUser?.role!=='admin'){
     showToast('Only administrators can create weeks.','error');
@@ -5797,6 +5830,7 @@ async function saveWeek(){
   const end=document.getElementById('weekEndInput')?.value||'';
   if(!name){showToast('Enter week name','error');return;}
   if(start&&end&&end<start){showToast('End date cannot be before start date','error');return;}
+  if(editingWeekId){await updateWeek(editingWeekId,name,termId,sessionId,start,end);return;}
 
   // Prevent accidental duplicate weeks in the same term/session.
   let duplicateQuery=supabaseClient.from('weeks').select('id,name').ilike('name',name).limit(1);
