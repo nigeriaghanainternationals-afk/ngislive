@@ -7828,7 +7828,8 @@ async function classData(classId,termId,sessionId){
   /* A subject assigned to the class's whole section still counts when its saved class list is out of date. */
   const secOk=sid=>{const sub=(subjects||[]).find(x=>sameId(x.id,sid));const k=secOfClass();return !!(sub&&k&&(sub.sections||[]).includes(k));};
   const twinOk=sid=>twinSubjects(sid).some(x=>subjectOkForClass(classId,x.id));
-  all=all.filter(r=>subjectOkForClass(classId,r.subject_id)||(hasReal(r)&&(secOk(r.subject_id)||twinOk(r.subject_id))));
+  const subExists=sid=>!!(subjects||[]).find(x=>sameId(x.id,sid));
+  all=all.filter(r=>subjectOkForClass(classId,r.subject_id)||(hasReal(r)&&subExists(r.subject_id)));
   try{all=await addMidTermScores(all,classId,termId,sessionId,secOk,twinOk);}catch(e){console.warn('Mid-term merge for report card:',e);}
   return all;
 }
@@ -7840,7 +7841,7 @@ async function addMidTermScores(all,classId,termId,sessionId,secOk,twinOk){
   const mt=await selectByStudentIds('midterm_assessments','student_id,subject_id,major_test_score',{term_id:termId,session_id:sessionId},ids);
   if(mt.error||!mt.data)return all;
   const senior=isSenior(classId);
-  const canon=sid=>(subjectOkForClass(classId,sid)||secOk(sid)||twinOk(sid))?sid:null;
+  const canon=sid=>((subjects||[]).find(x=>sameId(x.id,sid)))?sid:null;
   const idx={};all.forEach(r=>{idx[String(r.student_id)+'|'+String(r.subject_id)]=r;});
   const out=all.slice();
   mt.data.forEach(m=>{
