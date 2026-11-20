@@ -5040,6 +5040,7 @@ async function fetchMidTermRecords(studentId,termId,sessionId){
  if(error)throw error; return data||[];
 }
 function midTermMultiReportHtml(student,records,term,session,ctTeacher,remark){
+ try{if(window.ngisReligionKind)records=(records||[]).filter(r=>{const nm=r.subjects?.name||(subjects.find(s=>String(s.id)===String(r.subject_id))||{}).name;return !window.ngisReligionKind(nm)||Number.isFinite(parseFloat(r.major_test_score));});}catch(_){}
  const cls=classes.find(c=>String(c.id)===String(student?.class_id));
  const rows=(records||[]).map(r=>{const score=r.major_test_score,g=midTermGrade(score);return '<tr><td>'+escapeHtml(r.subjects?.name||subjects.find(s=>String(s.id)===String(r.subject_id))?.name||'Subject')+'</td><td><strong>'+(score??'-')+' / 20</strong></td><td><span class="grade-badge '+g.cls+'">'+g.grade+'</span></td><td>'+escapeHtml(g.remark)+'</td></tr>';}).join('');
  const valid=(records||[]).filter(r=>Number.isFinite(parseFloat(r.major_test_score)));
@@ -7636,6 +7637,20 @@ const t1eff=r=>{const m=num(r.test1_manual);return Math.min(scheme(r.class_id).t
 const total=r=>{const sc=scheme(r.class_id);return r2(t1eff(r)+Math.min(sc.t2,n0(r.test2))+(sc.senior?0:n0(r.project))+eff(r)+Math.min(sc.ex,n0(r.exam)));};
 function grade(p){if(p>=95)return['A+','Excellent'];if(p>=85)return['A','Very Good'];if(p>=80)return['B+','Good'];if(p>=70)return['B','Above Average'];if(p>=60)return['C','Average'];if(p>=50)return['D','Pass'];if(p>=45)return['E','Below Average'];return['F','Fail'];}
 const esc=v=>escapeHtml(v);
+/* Religion subjects: a child takes IRS (Islamic) OR CRS (Christian), never both. */
+const relKind=name=>{const n=String(name||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(!n)return null;
+  if(/ISLAM|^IRS|^IRK|^IRE$/.test(n))return 'IRS';
+  if(/CHRIST|^CRS|^CRK|^CRE$/.test(n))return 'CRS';
+  return null;};
+window.ngisReligionKind=relKind;
+const normSub=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+/* Look-alike subject records, e.g. "HAUSA" and "HAUSA LANGUAGE". */
+function twinSubjects(subjectId){
+  const me=(subjects||[]).find(x=>sameId(x.id,subjectId));const n0_=normSub(me&&me.name);
+  if(n0_.length<3)return [];
+  return (subjects||[]).filter(x=>{if(sameId(x.id,subjectId))return false;const n=normSub(x.name);return n.length>=3&&(n===n0_||n.startsWith(n0_)||n0_.startsWith(n));});
+}
+const hasReal=r=>['test1','test1_manual','test2','project','assignment_manual','assignment_auto','exam'].some(k=>num(r[k])!==null);
 const activeSess=()=>sessions.find(s=>s.is_active)?.id||'';
 const opts=(list,ph,lab)=>'<option value="">'+ph+'</option>'+list.map(x=>'<option value="'+x.id+'">'+esc(lab(x))+'</option>').join('');
 const termLab=t=>t.name;
@@ -7657,7 +7672,12 @@ async function tsSync(studentIds,subjectId,termId,sessionId){
     selectByStudentIds('midterm_assessments','student_id,major_test_score',{subject_id:subjectId,term_id:termId,session_id:sessionId},studentIds),
     wk.size?selectByStudentIds('assessments','student_id,week_id,assignment_score,test_score',{subject_id:subjectId},studentIds):Promise.resolve({data:[]})]);
   const t1={},asg={};
-  (mt.data||[]).forEach(r=>{if(r.major_test_score!==null){const st=students.find(x=>sameId(x.id,r.student_id));t1[r.student_id]=isSenior(st?.class_id)?r2(Number(r.major_test_score)/2):Number(r.major_test_score);}});
+  const putT1=r=>{if(r.major_test_score!==null&&r.major_test_score!==undefined&&r.major_test_score!==''){const st=students.find(x=>sameId(x.id,r.student_id));t1[r.student_id]=isSenior(st?.class_id)?r2(Number(r.major_test_score)/2):Number(r.major_test_score);}};
+  (mt.data||[]).forEach(putT1);
+  for(const tw of twinSubjects(subjectId)){
+    try{const tr=await selectByStudentIds('midterm_assessments','student_id,major_test_score',{subject_id:tw.id,term_id:termId,session_id:sessionId},studentIds);
+      (tr.data||[]).forEach(r=>{if(t1[r.student_id]===undefined)putT1(r);});}catch(e){console.warn(e);}
+  }
   (as.data||[]).forEach(r=>{if(!wk.has(String(r.week_id)))return;asg[r.student_id]=(asg[r.student_id]||0)+0.1*(n0(r.assignment_score)+n0(r.test_score));});
   const now=new Date().toISOString();
   const rows=studentIds.map(id=>({student_id:id,class_id:students.find(s=>sameId(s.id,id))?.class_id||null,subject_id:subjectId,term_id:termId,session_id:sessionId,
@@ -7804,11 +7824,44 @@ async function classData(classId,termId,sessionId){
     if(!data||data.length<1000)break;
     from+=1000;
   }
-  return all.filter(r=>subjectOkForClass(classId,r.subject_id));
+  const secOfClass=()=>{try{return ngisSectionOfClass((classes.find(x=>sameId(x.id,classId))||{}).name);}catch(_){return null;}};
+  /* A subject assigned to the class's whole section still counts when its saved class list is out of date. */
+  const secOk=sid=>{const sub=(subjects||[]).find(x=>sameId(x.id,sid));const k=secOfClass();return !!(sub&&k&&(sub.sections||[]).includes(k));};
+  const twinOk=sid=>twinSubjects(sid).some(x=>subjectOkForClass(classId,x.id));
+  all=all.filter(r=>subjectOkForClass(classId,r.subject_id)||(hasReal(r)&&(secOk(r.subject_id)||twinOk(r.subject_id))));
+  try{all=await addMidTermScores(all,classId,termId,sessionId,secOk,twinOk);}catch(e){console.warn('Mid-term merge for report card:',e);}
+  return all;
+}
+/* The termly card used to show only subjects that already had a term_scores row. Mid-term scores that were saved
+   but never synced (or saved under a look-alike subject such as HAUSA LANGUAGE) are now merged in as Test 1. */
+async function addMidTermScores(all,classId,termId,sessionId,secOk,twinOk){
+  const ids=students.filter(s=>sameId(s.class_id,classId)).map(s=>s.id);
+  if(!ids.length)return all;
+  const mt=await selectByStudentIds('midterm_assessments','student_id,subject_id,major_test_score',{term_id:termId,session_id:sessionId},ids);
+  if(mt.error||!mt.data)return all;
+  const senior=isSenior(classId);
+  const canon=sid=>(subjectOkForClass(classId,sid)||secOk(sid)||twinOk(sid))?sid:null;
+  const idx={};all.forEach(r=>{idx[String(r.student_id)+'|'+String(r.subject_id)]=r;});
+  const out=all.slice();
+  mt.data.forEach(m=>{
+    if(num(m.major_test_score)===null)return;
+    const cs=canon(m.subject_id);if(cs===null)return;
+    const v=senior?r2(Number(m.major_test_score)/2):Number(m.major_test_score);
+    const k=String(m.student_id)+'|'+String(cs),ex=idx[k];
+    if(!ex){const row={student_id:m.student_id,class_id:classId,subject_id:cs,term_id:termId,session_id:sessionId,test1:v};idx[k]=row;out.push(row);}
+    else if(num(ex.test1)===null&&num(ex.test1_manual)===null)ex.test1=v;
+  });
+  return out;
 }
 function buildReport(student,all,termId,sessionId,classId){
-  const SC=scheme(classId);const mine=all.filter(r=>sameId(r.student_id,student.id));
-  const sa={};all.forEach(r=>{(sa[r.subject_id]=sa[r.subject_id]||[]).push(total(r));});
+  const SC=scheme(classId);
+  const subKind=id=>relKind((subjects.find(s=>sameId(s.id,id))||{}).name);
+  /* IRS / CRS: show only the religion subject this child actually has a score in. */
+  const takes0=r=>!subKind(r.subject_id)||total(r)>0;
+  const twinScored=r=>!hasReal(r)&&twinSubjects(r.subject_id).some(t=>all.some(q=>sameId(q.student_id,r.student_id)&&sameId(q.subject_id,t.id)&&hasReal(q)));
+  const takes=r=>takes0(r)&&!twinScored(r);
+  const mine=all.filter(r=>sameId(r.student_id,student.id)&&takes(r));
+  const sa={};all.forEach(r=>{if(!takes(r))return;(sa[r.subject_id]=sa[r.subject_id]||[]).push(total(r));});
   const term=terms.find(x=>sameId(x.id,termId)),sess=sessions.find(x=>sameId(x.id,sessionId)),cls=classes.find(x=>sameId(x.id,classId));
   let sum=0;
   const subName=id=>subjects.find(s=>sameId(s.id,id))?.name||'';
