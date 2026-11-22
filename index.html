@@ -11487,7 +11487,7 @@ function ntrPageHtml(d){
     const rows=x.topics.map(t=>{const v=(g.t||{})[t];return '<tr><td>'+esc(t)+'</td>'+L.map(l=>'<td class="ntr-lv">'+ntrLevelDot(l,v===l)+'</td>').join('')+'</tr>';}).join('');
     const wide=(n%2===1&&idx===n-1)?' wide':'';
     return '<div class="ntr-area'+wide+'" style="border-color:'+x.a.c+'"><div class="ntr-ah" style="background:'+x.a.c+'"><span class="ntr-ai">'+x.a.i+'</span><span class="ntr-an">'+esc(x.a.n)+'</span>'+
-      (ov?'<span class="ntr-ao"><i style="background:'+NTR_LC[L.indexOf(ov)]+'"></i>'+esc(ov)+'</span>':'')+letters+'</div>'+
+      '<span style="flex:1"></span>'+letters+'</div>'+
       '<table class="ntr-t"><colgroup><col>'+L.map(()=>'<col style="width:2.6em">').join('')+'</colgroup><tbody>'+rows+'</tbody></table></div>';
   };
   const att=(d.present!=null&&d.present!=='')||(d.daysOpen!=null&&d.daysOpen!=='')?((d.present!=null&&d.present!==''?d.present:'__')+' out of '+(d.daysOpen!=null&&d.daysOpen!==''?d.daysOpen:'__')+' days'):'';
