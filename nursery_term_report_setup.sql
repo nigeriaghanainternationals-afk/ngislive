@@ -2,7 +2,7 @@
 -- Run ONCE in Supabase > SQL Editor. Safe to re-run.
 
 -- 1) Topics the class teacher enters for each term (one row per class per term).
---    topics = {"practical":["Pouring water","Buttoning"],"sensorial":[...], ...}  (keys = the nine learning areas)
+--    topics = {"practical":["Pouring water","Buttoning"],"sensorial":[...], ...}  (keys = the six learning areas)
 create table if not exists public.nursery_term_topics(
   id uuid primary key default gen_random_uuid(),
   class_id text not null,

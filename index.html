@@ -1281,7 +1281,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
       <div class="card no-print">
         <div class="card-header"><h3><i class="fas fa-star"></i> Nursery End-of-Term Report (Montessori)</h3></div>
         <div id="ntrSetupNote"></div>
-        <p class="ntr-hint">A colourful end-of-term card for each nursery pupil. <strong>Step 1:</strong> type the topics taught this term under the ten learning areas &mdash; only those topics will appear on the report, so you can change them every term. <strong>Step 2:</strong> grade each pupil with the same four levels used in the weekly observation sheet (Introduced, Developing, Progressing Well, Mastered).</p>
+        <p class="ntr-hint">A colourful end-of-term card for each nursery pupil. <strong>Step 1:</strong> type the topics taught this term under the six learning areas &mdash; only those topics will appear on the report, so you can change them every term. <strong>Step 2:</strong> grade each pupil with the same four levels used in the weekly observation sheet (Introduced, Developing, Progressing Well, Mastered).</p>
         <div class="form-grid">
           <div class="form-group"><label>Session &amp; Term</label><select id="ntrSession" onchange="ntrContextChange()"><option value="">-- No session set --</option></select></div>
           <div class="form-group"><label>Class</label><select id="ntrClass" onchange="ntrClassChange()"><option value="">-- Choose Nursery Class --</option></select></div>
@@ -11332,7 +11332,7 @@ window.ngisOtherReportFiles=async function(classId,sessionId,weekIds){
 Object.assign(window,{buildNurseryPdfBytes,buildSheetData,clearNurserySheet,crc32,deleteAllNurseryData,deleteNurseryObservation,downloadNurseryPdf,downloadNurseryZip,emtBuild,emtClassChange,emtClear,emtDelete,emtDownloadPdf,emtDownloadZip,emtExportWord,emtFileSafe,emtFillStudents,emtFmtDate,emtFormData,emtHtml,emtLoad,emtLoadSheet,emtOpen,emtPdfBytes,emtPopulate,emtPreview,emtReadRatings,emtRecData,emtRenderForm,emtRenderTable,emtSave,emtSel,emtTeacherFor,emtTick,emtUpdateZipInfo,emtWrap,emtWriteRatings,emtZipRecords,ensurePdfLib,exportNurseryReport,formSheetData,generateNurseryReport,groupToSheetData,loadNurseryObservations,loadNurserySheet,loadNurseryStudents,loadScriptOnce,makeZip,monBadge,monChips,monCompute,monDefaultWeek,monSortedWeeks,monToday,monWeeksToDate,nCanManageSubjects,nInsertSubject,nurseryAddStandardSubjects,nurseryAddSubject,nurseryCloseSubject,nurseryDeleteSubject,nurseryDocWrap,nurseryOpenSubject,nurserySelection,nurserySheetFile,nurserySheetHtml,nurseryZipGroups,onNurseryTick,openObsMonitor,populateNurseryControls,populateObsMonitorControls,promoteNurseryLearners,readNurseryRows,refreshNurseryUI,registerNurseryLearner,renderNurseryObservationsTable,renderNurseryRegister,renderNurserySheetForm,renderNurserySubjectsAdmin,renderObsMonitor,saveNurseryEdit,saveNurserySheet,setMonTab,sheetSubjects,subjectBlockHtml,suggestNextClass,toggleNurseryAll,updateNurseryField,updateNurseryLevel,updateZipInfo,writeNurseryRows});
 
 /* ===== NURSERY END-OF-TERM REPORT CARD (Montessori) =====
-   Teachers type the topics taught this term under each of the ten learning areas (Step 1).
+   Teachers type the topics taught this term under each of the six learning areas (Step 1).
    Only those topics appear on the report. They are graded with the same four levels the weekly
    nursery observation sheet uses: Introduced / Developing / Progressing Well / Mastered (Step 2). */
 const NTR_AREAS=[
@@ -11341,11 +11341,7 @@ const NTR_AREAS=[
   {k:'math',n:'Mathematics',i:'\uD83D\uDD22',c:'#2D9CDB',ph:'Number rods 1-10\nSandpaper numerals\nCounting beads'},
   {k:'english',n:'English Language',i:'\uD83D\uDD24',c:'#9B59B6',ph:'Letter sounds a-m\nSandpaper letters\nRhyming words'},
   {k:'cultural',n:'Cultural Education',i:'\uD83C\uDF0D',c:'#3E9B54',ph:'Land and water forms\nParts of a plant\nCommunity helpers'},
-  {k:'social',n:'Social Grace & Courtesy',i:'\uD83E\uDD1D',c:'#D9547E',ph:'Greeting politely\nSaying please and thank you\nTaking turns'},
-  {k:'art',n:'Creative Arts / Music and Movement',i:'\uD83C\uDFA8',c:'#F0743E',ph:'Finger painting\nNursery rhymes\nRhythm with instruments'},
-  {k:'physical',n:'Physical Development / Outdoor Play',i:'\uD83E\uDD38',c:'#5566C2',ph:'Balancing on the line\nThrowing and catching\nGarden play'},
-  {k:'science',n:'Science & Exploration',i:'\uD83D\uDD2C',c:'#1C9C93',ph:'Sink or float\nMagnets\nLiving and non-living things'},
-  {k:'religious',n:'Religious & Moral Education',i:'\uD83D\uDE4F',c:'#8A6A52',ph:'Prayer and thanksgiving\nKindness and honesty\nBible / Quran stories'}
+  {k:'social',n:'Social Grace & Courtesy',i:'\uD83E\uDD1D',c:'#D9547E',ph:'Greeting politely\nSaying please and thank you\nTaking turns'}
 ];
 const NTR_LC=['#FF9F43','#FFD43B','#8BD450','#2EB872'];      // colour of each level (same order as NURSERY_LEVELS)
 const NTR_MAX_TOPICS=10,NTR_MAX_LEN=60;
@@ -11369,7 +11365,9 @@ const NTR_CSS=
 ".ntr-info{display:grid;grid-template-columns:1.7fr 1fr 1.15fr;gap:.35em .8em;background:rgba(255,255,255,.94);border:.5mm solid #a8cfb0;border-radius:3mm;padding:.45em .9em}"+
 ".ntr-i small{display:block;font-size:.7em;font-weight:800;color:#4f7a5c;text-transform:uppercase;letter-spacing:.05em}"+
 ".ntr-i b{display:block;border-bottom:.3mm dotted #8fb4d6;min-height:1.3em;font-weight:800;font-size:1.05em;color:#1d2b53;overflow-wrap:anywhere}"+
-".ntr-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:.2em 1.1em;font-size:.85em;font-weight:700;color:#334;background:rgba(255,255,255,.9);border-radius:2em;padding:.25em .9em;align-self:center}"+
+".ntr-legend{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:.2em 1.1em;font-size:.9em;font-weight:700;color:#334;background:rgba(255,255,255,.95);border:.4mm solid #a8cfb0;border-radius:3mm;padding:.3em 1em;align-self:stretch}"+
+".ntr-lgt{flex:0 0 100%;text-align:center;font-weight:700;color:#24573a;font-size:.92em;line-height:1.25}"+
+".ntr-lgt b:first-child{text-transform:uppercase;letter-spacing:.05em;font-weight:800}"+
 ".ntr-lg{display:inline-flex;align-items:center;gap:.35em;white-space:nowrap}"+
 ".ntr-lg i{display:inline-block;width:1.05em;height:1.05em;border-radius:50%;border:.25mm solid rgba(0,0,0,.2)}"+
 ".ntr-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6em}"+
@@ -11482,7 +11480,7 @@ function ntrBgSvg(){
 function ntrLevelDot(lv,on){return '<span class="ntr-d'+(on?' on':'')+'"'+(on?' style="background:'+NTR_LC[NURSERY_LEVELS.indexOf(lv)]+'"':'')+'></span>';}
 function ntrPageHtml(d){
   const L=NURSERY_LEVELS;
-  const legend='<div class="ntr-legend">'+L.map((l,i)=>'<span class="ntr-lg"><i style="background:'+NTR_LC[i]+'"></i><b>'+l[0]+'</b> = '+esc(l)+'</span>').join('')+'</div>';
+  const legend='<div class="ntr-legend"><div class="ntr-lgt"><b>Assessment Indicators</b> &ndash; dear parents, the letters <b>I, D, P</b> and <b>M</b> in this report show your child&rsquo;s level of learning:</div>'+L.map((l,i)=>'<span class="ntr-lg"><i style="background:'+NTR_LC[i]+'"></i><b>'+l[0]+'</b> = '+esc(l)+'</span>').join('')+'</div>';
   const letters='<div class="ntr-ha">'+L.map(l=>'<span><b>'+l[0]+'</b></span>').join('')+'</div>';
   const areaHtml=(x,idx,n)=>{
     const g=x.g||{t:{}},ov=g.o&&L.indexOf(g.o)>-1?g.o:'';
