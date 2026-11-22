@@ -11450,6 +11450,83 @@ function ntrFox(x,y,s){
   return '<g transform="translate('+x+' '+y+') scale('+s+')"><path d="M5 4Q17 5 15 -7Q11 0 5 0Z" fill="#ee8a3b"/><circle cx="14.2" cy="-6.2" r="2.3" fill="#fff4e0"/><ellipse rx="6" ry="6.6" fill="#ee8a3b"/><ellipse cy="1.2" rx="3.3" ry="4.6" fill="#fff4e0"/><g transform="translate(0 -4)"><path d="M-6.2 -7L-5 -14.5L-1.2 -10.2H1.2L5 -14.5L6.2 -7Q6.2 -2 0 .3Q-6.2 -2 -6.2 -7Z" fill="#ee8a3b"/><path d="M-4.4 -3.4Q0 .8 4.4 -3.4Q3 2.6 0 2.8Q-3 2.6 -4.4 -3.4Z" fill="#fff4e0"/><circle cx="-2.3" cy="-4" r=".8" fill="#2b2b2b"/><circle cx="2.3" cy="-4" r=".8" fill="#2b2b2b"/><ellipse cy="-1.1" rx="1" ry=".7" fill="#2b2b2b"/></g><ellipse cx="-2.6" cy="6.4" rx="2" ry="1.3" fill="#5a3a22"/><ellipse cx="2.6" cy="6.4" rx="2" ry="1.3" fill="#5a3a22"/></g>';
 }
 function ntrMushroom(x,y,s){return '<g transform="translate('+x+' '+y+') scale('+s+')"><rect x="-1.3" y="-3" width="2.6" height="4" rx="1" fill="#f6ead7"/><path d="M-5 -3Q0 -10 5 -3Z" fill="#e0524d"/><circle cx="-2" cy="-5" r=".8" fill="#fff"/><circle cx="1.8" cy="-4.8" r=".7" fill="#fff"/></g>';}
+/* ---------- Montessori materials (original SVG art; local units ~mm, baseline y=0) ---------- */
+function ntrMG(x,y,sc,inner){return '<g transform="translate('+x+' '+y+') scale('+sc+')">'+inner+'</g>';}
+function ntrPinkTower(x,y,sc){
+  let g='';
+  for(let i=0;i<8;i++){const w=22-2.6*i,h=3,yy=-(i+1)*h;
+    g+='<rect x="'+(-w/2)+'" y="'+yy+'" width="'+w+'" height="'+h+'" rx=".5" fill="'+(i%2?'#f48fb1':'#f06292')+'" stroke="rgba(0,0,0,.14)" stroke-width=".25"/>'+
+       '<rect x="'+(-w/2+.5)+'" y="'+(yy+.4)+'" width="'+(w-1)+'" height=".7" rx=".35" fill="#fff" opacity=".38"/>';}
+  return ntrMG(x,y,sc,g);
+}
+function ntrRedRods(x,y,sc){
+  let g='';
+  [30,24,18,12].forEach((len,i)=>{const yy=-(i+1)*3.8,n=Math.round(len/6);
+    for(let k=0;k<n;k++)g+='<rect x="'+(k*6)+'" y="'+yy+'" width="6" height="3" fill="'+(k%2?'#355c9a':'#e63946')+'"/>';
+    g+='<rect x="0" y="'+yy+'" width="'+len+'" height="3" rx=".8" fill="none" stroke="rgba(0,0,0,.25)" stroke-width=".35"/>';});
+  return ntrMG(x,y,sc,g);
+}
+function ntrBeadStair(x,y,sc){
+  const C=['#e63946','#2a9d3f','#f06ea9','#f6c928','#7cc7ee','#8e5bd0','#f4f4f4','#8b5a2b','#1d3f8a'];
+  let g='';
+  for(let n=1;n<=9;n++){const cx=(n-1)*2.8+1.3;
+    for(let j=0;j<n;j++){const cy=-(j*2.4+1.2);
+      g+='<circle cx="'+cx+'" cy="'+cy+'" r="1.25" fill="'+C[n-1]+'" stroke="rgba(0,0,0,.22)" stroke-width=".2"/><circle cx="'+(cx-.4)+'" cy="'+(cy-.4)+'" r=".35" fill="#fff" opacity=".65"/>';}}
+  return ntrMG(x,y,sc,g);
+}
+function ntrKnobCyl(x,y,sc){
+  const K=['#e63946','#2d9cdb','#f6c928'];
+  let g='';
+  [[-6.5,14],[0,11],[6.5,8]].forEach((a,i)=>{const cx=a[0],h=a[1];
+    g+='<rect x="'+(cx-2.8)+'" y="'+(-h)+'" width="5.6" height="'+h+'" rx="1" fill="#e9cfa6" stroke="rgba(0,0,0,.18)" stroke-width=".3"/>'+
+       '<rect x="'+(cx-.6)+'" y="'+(-h-2.4)+'" width="1.2" height="2.6" fill="#b98a55"/><circle cx="'+cx+'" cy="'+(-h-2.9)+'" r="1.5" fill="'+K[i]+'" stroke="rgba(0,0,0,.2)" stroke-width=".25"/>';});
+  return ntrMG(x,y,sc,g);
+}
+function ntrAbacus(x,y,sc){
+  let g='<rect x="-12" y="-17" width="24" height="17" rx="1.5" fill="rgba(255,255,255,.55)" stroke="#d8932b" stroke-width="1.6"/>';
+  const C=['#e63946','#f4a261','#2fb5d0'],D=['#f6c928','#6cc24a','#8e5bd0'];
+  [-12.8,-8.5,-4.2].forEach((yy,i)=>{
+    g+='<line x1="-11" y1="'+yy+'" x2="11" y2="'+yy+'" stroke="#b57a22" stroke-width=".5"/>';
+    for(let k=0;k<5;k++)g+='<circle cx="'+(-9.4+k*2.5)+'" cy="'+yy+'" r="1.2" fill="'+C[i]+'" stroke="rgba(0,0,0,.2)" stroke-width=".2"/>';
+    for(let k=0;k<3;k++)g+='<circle cx="'+(4+k*2.5)+'" cy="'+yy+'" r="1.2" fill="'+D[i]+'" stroke="rgba(0,0,0,.2)" stroke-width=".2"/>';});
+  g+='<rect x="-12" y="-.8" width="3" height="1.6" fill="#b57a22"/><rect x="9" y="-.8" width="3" height="1.6" fill="#b57a22"/>';
+  return ntrMG(x,y,sc,g);
+}
+function ntrShapeSorter(x,y,sc){
+  return ntrMG(x,y,sc,'<path d="M-13 -12L-9 -16H17L13 -12Z" fill="#ffd36b"/><path d="M13 -12L17 -16V-4L13 0Z" fill="#e0a02a"/>'+
+    '<rect x="-13" y="-12" width="26" height="12" rx=".8" fill="#f4b83a" stroke="#d99a1f" stroke-width=".4"/>'+
+    '<rect x="-10" y="-9" width="5" height="5" rx=".5" fill="#7fd3e8" stroke="#2b7a8c" stroke-width=".3"/>'+
+    '<path d="M-1 -4L1.5 -9L4 -4Z" fill="#e63946" stroke="#8e1b25" stroke-width=".3"/>'+
+    '<circle cx="9" cy="-6.5" r="2.7" fill="#1f6f8b" stroke="#0e3f50" stroke-width=".3"/>');
+}
+function ntrXylophone(x,y,sc){
+  const C=['#e63946','#f4a261','#f6c928','#6cc24a','#2fb5d0','#3a6fd8','#8e5bd0'];
+  let g='<g stroke="#c98b4a" stroke-width="1.3" stroke-linecap="round"><line x1="-9" y1="0" x2="-6" y2="-19"/><line x1="9" y1="0" x2="6" y2="-19"/></g>';
+  C.forEach((c,i)=>{const hw=8.2-i*.5,yy=-(1.6+i*2.6);
+    g+='<rect x="'+(-hw)+'" y="'+(yy-1.1)+'" width="'+(hw*2)+'" height="2.2" rx=".9" fill="'+c+'" stroke="rgba(0,0,0,.18)" stroke-width=".2"/>';});
+  return ntrMG(x,y,sc,g);
+}
+function ntrRingStack(x,y,sc){
+  const C=['#e63946','#f4a261','#f6c928','#6cc24a','#2fb5d0','#8e5bd0'];
+  let g='<rect x="-7.5" y="-3" width="15" height="3" rx="1" fill="#b98a55"/><rect x="-.8" y="-20" width="1.6" height="17.5" rx=".6" fill="#c99a62"/>';
+  C.forEach((c,i)=>{const rw=7-i*.6,yy=-(4.6+i*2.1);
+    g+='<ellipse cx="0" cy="'+yy+'" rx="'+rw+'" ry="1.8" fill="'+c+'" stroke="rgba(0,0,0,.2)" stroke-width=".25"/><ellipse cx="'+(-rw*.35)+'" cy="'+(yy-.6)+'" rx="'+(rw*.3)+'" ry=".35" fill="#fff" opacity=".5"/>';});
+  g+='<circle cx="0" cy="-21" r="1.8" fill="#e63946" stroke="rgba(0,0,0,.2)" stroke-width=".25"/>';
+  return ntrMG(x,y,sc,g);
+}
+function ntrSolids(x,y,sc){
+  return ntrMG(x,y,sc,'<path d="M-9 -11L-14 -1L-8 1.5Z" fill="#3f5a8a"/><path d="M-9 -11L-8 1.5L-3 -1Z" fill="#5b79ad"/>'+
+    '<rect x="-1.7" y="-9" width="6.4" height="9" fill="#e63946"/><ellipse cx="1.5" cy="0" rx="3.2" ry="1.2" fill="#c92f3d"/><ellipse cx="1.5" cy="-9" rx="3.2" ry="1.2" fill="#f4707b"/>'+
+    '<circle cx="11" cy="-4.5" r="4.5" fill="#2fb5d0" stroke="rgba(0,0,0,.18)" stroke-width=".3"/><ellipse cx="9.4" cy="-6.4" rx="1.3" ry="1.9" fill="#fff" opacity=".55" transform="rotate(25 9.4 -6.4)"/>');
+}
+function ntrBinomial(x,y,sc){
+  return ntrMG(x,y,sc,'<rect x="-7" y="-14" width="14" height="14" rx="1" fill="#e8c99b" stroke="#b98a55" stroke-width=".5"/>'+
+    '<rect x="-5.5" y="-12.5" width="5.2" height="5.2" fill="#1f4fa8"/><rect x=".3" y="-12.5" width="5.2" height="5.2" fill="#222"/>'+
+    '<rect x="-5.5" y="-6.7" width="5.2" height="5.2" fill="#222"/><rect x=".3" y="-6.7" width="5.2" height="5.2" fill="#e63946"/>');
+}
+function ntrTile(x,y,c,ch,rot){
+  return '<g transform="rotate('+(rot||0)+' '+(x+4.5)+' '+(y+4.5)+')"><rect x="'+x+'" y="'+y+'" width="9" height="9" rx="1.3" fill="'+c+'" stroke="rgba(0,0,0,.16)" stroke-width=".3"/><text x="'+(x+4.5)+'" y="'+(y+7)+'" font-size="7.4" font-weight="700" font-family="Nunito,Arial,sans-serif" fill="#fff" text-anchor="middle">'+ch+'</text></g>';
+}
 function ntrBgSvg(){
   let s='<svg class="ntr-bg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" preserveAspectRatio="none"><defs>'+
    '<linearGradient id="ntrSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9e8f4"/><stop offset=".4" stop-color="#fff6e6"/><stop offset=".78" stop-color="#fdf0dc"/><stop offset="1" stop-color="#e4f3d2"/></linearGradient>'+
@@ -11461,7 +11538,7 @@ function ntrBgSvg(){
   const rc=['#e76f51','#f4a261','#e9c46a','#8ab17d','#6ba3be'];
   s+='<g fill="none" stroke-width="3.1">';rc.forEach((c,i)=>{const r=28-i*3.1;s+='<path d="M'+(105-r).toFixed(1)+' 28A'+r.toFixed(1)+' '+r.toFixed(1)+' 0 0 1 '+(105+r).toFixed(1)+' 28" stroke="'+c+'"/>';});s+='</g>';
   s+='<circle cx="105" cy="28" r="13.4" fill="#fff"/><circle cx="105" cy="28" r="13.4" fill="none" stroke="#f0cdb0" stroke-width=".8" stroke-dasharray="1.2 1.4"/>';
-  s+=ntrHotAir(26,22,.95)+ntrOwl(188,20,.9);
+  s+=ntrPinkTower(20,38,1)+ntrBlock(36,30,'#e76f51','1',-6)+ntrBlock(44.5,30,'#2d9cdb','2',4)+ntrBlock(40,22,'#3e9b54','3',-3)+ntrTile(10,4,'#f06ec6','m',-8)+ntrTile(55,27,'#9b59b6','a',7)+ntrTile(138,8,'#e3a21a','b',-6)+ntrSolids(148,38,.85)+ntrXylophone(176,38,1)+ntrRingStack(197,38,1);
   [[78,20,1.8,'#f4c95d'],[132,8,1.5,'#ffffff'],[8,64,1.6,'#f4c95d'],[203,94,1.6,'#ffffff'],[6,140,1.4,'#f4c95d'],[204,170,1.5,'#f4c95d'],[7,205,1.5,'#ffffff'],[203,222,1.4,'#f4c95d']].forEach(a=>{s+=ntrStar(a[0],a[1],a[2],a[3],.95);});
   [[4.5,262,8,.8],[4.5,226,-8,.75],[4.5,190,8,.7],[4.5,154,-8,.7],[4.5,118,8,.7],[4.5,82,-8,.65]].forEach(a=>{s+=ntrSprig(a[0],a[1],a[2],a[3],'#7fb284','#a8cf9a');});
   [[205.5,262,-8,.8],[205.5,226,8,.75],[205.5,190,-8,.7],[205.5,154,8,.7],[205.5,118,-8,.7]].forEach(a=>{s+=ntrSprig(a[0],a[1],a[2],a[3],'#7fb284','#f2b8a2');});
@@ -11469,9 +11546,7 @@ function ntrBgSvg(){
   s+='<path d="M0 277C35 268 75 273 110 278C145 283 180 271 210 275V297H0Z" fill="#cfe8c0"/>';
   s+='<path d="M0 286C40 278 85 290 125 285C160 281 190 287 210 283V297H0Z" fill="#a8d594"/>';
   s+='<path d="M0 292C45 286 90 295 130 292C165 289 190 293 210 291V297H0Z" fill="#7fbb6c"/>';
-  [[40,284,'#f28fa8',.8],[78,283,'#f4c95d',.7],[106,285,'#ffffff',.7],[136,282,'#c9a7ee',.8],[160,284,'#ffa94d',.7],[8,285,'#f4c95d',.7],[201,283,'#f28fa8',.7]].forEach(f=>{s+=ntrFlower(f[0],f[1],f[2],f[3]);});
-  s+=ntrBunny(26,284,.85)+ntrFox(183,283,.85)+ntrMushroom(60,290,1)+ntrMushroom(146,291,.9)+ntrLadybug(88,292.5);
-  s+='<path d="M96 279q6 -9 11 -4t10 -6" fill="none" stroke="#9aa5b1" stroke-width=".4" stroke-dasharray="1 1.3"/>'+ntrBee(121,271)+ntrButterfly(158,273);
+  s+=ntrPinkTower(18,290,.8)+ntrKnobCyl(39,290,.95)+ntrBlock(52,282,'#f4a261','4',3)+ntrBlock(60,282,'#8e5bd0','5',-4)+ntrBlock(56,274,'#2fb5d0','6',2)+ntrBeadStair(73,290,.85)+ntrAbacus(108,290,.9)+ntrBinomial(128,290,.95)+ntrShapeSorter(148,290,.75)+ntrRedRods(162,290,.5)+ntrSolids(190,290,.8);
   return s+'</svg>';
 }
 
@@ -11480,7 +11555,7 @@ function ntrBgSvg(){
 function ntrLevelDot(lv,on){return '<span class="ntr-d'+(on?' on':'')+'"'+(on?' style="background:'+NTR_LC[NURSERY_LEVELS.indexOf(lv)]+'"':'')+'></span>';}
 function ntrPageHtml(d){
   const L=NURSERY_LEVELS;
-  const legend='<div class="ntr-legend"><div class="ntr-lgt"><b>Assessment Indicators</b> &ndash; dear parents, the letters <b>I, D, P</b> and <b>M</b> in this report show your child&rsquo;s level of learning:</div>'+L.map((l,i)=>'<span class="ntr-lg"><i style="background:'+NTR_LC[i]+'"></i><b>'+l[0]+'</b> = '+esc(l)+'</span>').join('')+'</div>';
+  const legend='<div class="ntr-legend"><div class="ntr-lgt"><b>Assessment Indicators</b> &ndash; Dear Parents, the letters <b>I, D, P</b> and <b>M</b> in this report show your child&rsquo;s level of learning:</div>'+L.map((l,i)=>'<span class="ntr-lg"><i style="background:'+NTR_LC[i]+'"></i><b>'+l[0]+'</b> = '+esc(l)+'</span>').join('')+'</div>';
   const letters='<div class="ntr-ha">'+L.map(l=>'<span><b>'+l[0]+'</b></span>').join('')+'</div>';
   const areaHtml=(x,idx,n)=>{
     const g=x.g||{t:{}},ov=g.o&&L.indexOf(g.o)>-1?g.o:'';
