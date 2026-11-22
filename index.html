@@ -1124,6 +1124,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 
 <div class="nav-item" onclick="showSection('nurseryObservationSection',this)"><i class="fas fa-seedling"></i> Nursery Observation</div>
 <div class="nav-item" onclick="showSection('earlyMidTermSection',this)"><i class="fas fa-file-signature"></i> Early Years Mid-Term</div>
+<div class="nav-item" onclick="showSection('nurseryTermReportSection',this)"><i class="fas fa-star"></i> Nursery Term Report</div>
 <!-- Class-teacher-only register links: assignment checked when the menu is built and when opened. -->
 <div class="nav-item ngis-class-register" style="display:none" onclick="showSection('regMark',this)"><i class="fas fa-clipboard-list"></i> Class Register</div>
 <div class="nav-item ngis-class-register" style="display:none" onclick="showSection('regTerm',this)"><i class="fas fa-chart-line"></i> Register Summary</div>
@@ -1193,6 +1194,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <div class="nav-item" onclick="showSection('adminTeacherFeedback',this)"><i class="fas fa-user-tie"></i> Admin → Teacher Feedback</div>
 <div class="nav-item" onclick="showSection('nurseryObservationSection',this)"><i class="fas fa-seedling"></i> Nursery Observation</div>
 <div class="nav-item" onclick="showSection('earlyMidTermSection',this)"><i class="fas fa-file-signature"></i> Early Years Mid-Term</div>
+<div class="nav-item" onclick="showSection('nurseryTermReportSection',this)"><i class="fas fa-star"></i> Nursery Term Report</div>
 <div class="nav-item" onclick="showSection('nurseryRegisterSection',this)"><i class="fas fa-user-plus"></i> Register Learner</div>
 <div class="nav-item" onclick="showSection('nurseryMonitorSection',this)"><i class="fas fa-clipboard-check"></i> Observation Monitor</div>
 <div class="nav-item" onclick="showSection('nurserySubjectsSection',this)"><i class="fas fa-book"></i> Nursery Subjects</div>
@@ -1258,6 +1260,72 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
         </div>
         <div style="display:flex;justify-content:flex-end;"><button class="btn btn-accent" onclick="promoteNurseryLearners()"><i class="fas fa-level-up-alt"></i> Promote Selected</button></div>
       </div>
+    </div>
+<div id="nurseryTermReportSection" class="section hidden">
+<style>
+.ntr-warn{background:#fff4dd;border-left:4px solid #b9770e;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:.85rem}
+.ntr-step{display:flex;align-items:center;gap:10px;font-weight:800;color:#003366;margin:2px 0 6px;font-size:1.02rem}
+.ntr-step b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#ff6f9f,#ff9f43);color:#fff;font-size:.9rem}
+.ntr-hint{font-size:.84rem;color:#666;margin-bottom:14px;line-height:1.5}
+.ntr-tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}
+.ntr-tcard{border:2px solid #ccc;border-radius:14px;overflow:hidden;background:#fff}
+.ntr-tcard label{display:block;color:#fff;font-weight:800;padding:8px 12px;font-size:.92rem;text-shadow:0 1px 0 rgba(0,0,0,.18)}
+.ntr-tcard textarea{display:block;width:100%;border:0;outline:0;resize:vertical;padding:10px 12px;font-size:.9rem;line-height:1.5;min-height:104px;font-family:inherit;background:#fff}
+.ntr-empty{background:#f4f8fc;border:2px dashed #b9cbe0;border-radius:12px;padding:18px;text-align:center;color:#456;font-size:.9rem;margin-bottom:14px}
+.ntr-gt th{color:#fff;font-size:.8rem;padding:8px 6px;text-shadow:0 1px 0 rgba(0,0,0,.18)}
+.ntr-gt th:first-child{text-align:left;font-size:.92rem}
+.ntr-over td{background:#f4f8fc}
+.ntr-gt .ntr-tick{width:24px;height:24px;min-height:0;margin:0}
+.ntr-count{font-size:.85rem;color:#456;margin:0 0 12px}
+</style>
+      <div class="card no-print">
+        <div class="card-header"><h3><i class="fas fa-star"></i> Nursery End-of-Term Report (Montessori)</h3></div>
+        <div id="ntrSetupNote"></div>
+        <p class="ntr-hint">A colourful end-of-term card for each nursery pupil. <strong>Step 1:</strong> type the topics taught this term under the nine learning areas &mdash; only those topics will appear on the report, so you can change them every term. <strong>Step 2:</strong> grade each pupil with the same four levels used in the weekly observation sheet (Introduced, Developing, Progressing Well, Mastered).</p>
+        <div class="form-grid">
+          <div class="form-group"><label>Session &amp; Term</label><select id="ntrSession" onchange="ntrContextChange()"><option value="">-- No session set --</option></select></div>
+          <div class="form-group"><label>Class</label><select id="ntrClass" onchange="ntrClassChange()"><option value="">-- Choose Nursery Class --</option></select></div>
+        </div>
+      </div>
+      <div class="card no-print">
+        <div class="ntr-step"><b>1</b> Topics for this term</div>
+        <p class="ntr-hint">Write one topic per line in each learning area you taught (up to 8 per area; leave an area empty to leave it off the report). Press <strong>Save Topics</strong> when done &mdash; topics are saved per class and per term.</p>
+        <div class="form-grid" style="margin-bottom:10px;">
+          <div class="form-group"><label>Copy topics from an earlier term</label><div style="display:flex;gap:8px;"><select id="ntrCopyFrom" style="flex:1"><option value="">-- No earlier topics to copy --</option></select><button class="btn btn-secondary btn-sm" type="button" onclick="ntrCopyTopics()"><i class="fas fa-copy"></i> Copy</button></div></div>
+          <div class="form-group"><label>Days school opened this term</label><input type="number" id="ntrDaysOpen" min="0" max="200" placeholder="e.g. 60"></div>
+          <div class="form-group"><label>Next term begins</label><input type="date" id="ntrNextTerm"></div>
+        </div>
+        <div id="ntrTopicsForm" class="ntr-tgrid"></div>
+        <p class="ntr-count" id="ntrTopicCount"></p>
+        <div style="display:flex;justify-content:flex-end;"><button class="btn btn-primary" onclick="ntrSaveTopics()"><i class="fas fa-save"></i> Save Topics</button></div>
+      </div>
+      <div class="card no-print" id="ntrGradeCard">
+        <div class="ntr-step"><b>2</b> Grade a pupil</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Pupil's Name</label><select id="ntrStudent" onchange="ntrLoadSheet()"><option value="">-- Choose Pupil --</option></select></div>
+          <div class="form-group"><label>Class Teacher</label><input type="text" id="ntrTeacher" maxlength="120" placeholder="Class teacher's name"></div>
+          <div class="form-group"><label>Report Date</label><input type="date" id="ntrDate"></div>
+          <div class="form-group"><label>Days present</label><input type="number" id="ntrPresent" min="0" max="200" placeholder="e.g. 54"></div>
+        </div>
+        <div id="ntrGradeForm"></div>
+        <div class="form-grid">
+          <div class="form-group"><label>Class Teacher's Comment</label><textarea id="ntrTComment" class="comment-box" maxlength="300" placeholder="Class teacher's comment"></textarea></div>
+          <div class="form-group"><label>Head Teacher's Comment</label><textarea id="ntrHComment" class="comment-box" maxlength="300" placeholder="Head teacher's comment (optional)"></textarea></div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="ntrSaveReport()"><i class="fas fa-save"></i> Save Report</button>
+          <button class="btn btn-secondary" onclick="ntrPreview()"><i class="fas fa-eye"></i> Preview Report</button>
+          <button class="btn btn-success" onclick="ntrPrint(false)"><i class="fas fa-print"></i> Print</button>
+          <button class="btn btn-secondary" onclick="ntrDownloadPdf(false)"><i class="fas fa-file-pdf"></i> Download PDF</button>
+        </div>
+      </div>
+      <div class="card no-print">
+        <div class="card-header"><h3><i class="fas fa-table"></i> Saved Term Reports</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-success btn-sm" onclick="ntrPrint(true)"><i class="fas fa-print"></i> Print Whole Class</button><button class="btn btn-secondary btn-sm" onclick="ntrDownloadPdf(true)"><i class="fas fa-file-pdf"></i> Class PDF</button></div></div>
+        <p class="ntr-hint">Shows the reports saved for the class and term chosen above. The class buttons print or download every saved report in this list, one page per pupil.</p>
+        <div class="table-container"><table><thead><tr><th>#</th><th>Pupil</th><th>Class</th><th>Session / Term</th><th>Class Teacher</th><th>Report Date</th><th>Actions</th></tr></thead><tbody id="ntrTable"></tbody></table></div>
+      </div>
+      <div id="ntrDisplay"></div>
     </div>
 <div id="earlyMidTermSection" class="section hidden">
       <div class="card no-print">
@@ -1593,7 +1661,7 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 
 <div id="tsComments" class="section hidden"><div class="card">
 <div class="card-header"><h3><i class="fas fa-comments"></i> Termly Comments &amp; Next Term</h3></div>
-<div class="ts-note">Write each pupil's <b>Class Teacher's Comment</b> for the termly report card here. The <b>Principal's Comment</b> and the <b>Next Term Begins</b> date are entered by the administrator. <b>Total days school opened</b> is worked out automatically from all the marked Class Registers for the term (one number for the whole school, same on every report card). Each pupil's <b>days present</b> is copied from their class register.</div>
+<div class="ts-note">Write each pupil's <b>Class Teacher's Comment</b> for the termly report card here. The <b>Head Teacher's Comment</b> (Nursery &amp; Primary) or <b>Principal's Comment</b> (Secondary) and the <b>Next Term Begins</b> date are entered by the administrator. <b>Total days school opened</b> is worked out automatically from all the marked Class Registers for the term (one number for the whole school, same on every report card). Each pupil's <b>days present</b> is copied from their class register.</div>
 <div class="form-grid">
 <div class="form-group"><label>Class</label><select id="tsCClass" onchange="tsCLoad()"></select></div>
 <div class="form-group"><label>Term</label><select id="tsCTerm" onchange="tsCLoad()"></select></div>
@@ -2933,7 +3001,7 @@ function ngisApplyTeacherPartition(){
  if(currentUser?.role!=='teacher')return;
  const nav=document.getElementById('teacherNav');if(!nav)return;
  const sections=ngisTeacherPartitions();
- const nurseryOnly=new Set(['nurseryObservationSection','earlyMidTermSection','nurseryRegisterSection']);
+ const nurseryOnly=new Set(['nurseryObservationSection','earlyMidTermSection','nurseryTermReportSection','nurseryRegisterSection']);
  const teacherItems=[...nav.querySelectorAll('.nav-item')];
  teacherItems.forEach(el=>{const m=(el.getAttribute('onclick')||'').match(/showSection\('([^']+)'/);if(m&&ngisTeacherMenuRestricted(m[1]))el.style.display='none';});
  const hasClass=ngisHasClassTeacherAssignment();
@@ -7886,6 +7954,8 @@ async function addMidTermScores(all,classId,termId,sessionId,secOk,twinOk){
 }
 /* ---------- Report-card extras: gender, register attendance, teacher comments, next term date ---------- */
 const RX={};const rxKey=(c,t,se)=>[c,t,se].map(String).join('|');
+/* Nursery and Primary classes have a Head Teacher; Secondary classes have a Principal. */
+const headTitle=classId=>{const c=(classes||[]).find(x=>sameId(x.id,classId));let k=null;try{k=ngisSectionOfClass(c&&c.name);}catch(_){}return(k==='nursery'||k==='primary')?'Head Teacher':'Principal';};
 const fmtDays=n=>Number.isInteger(n)?String(n):n.toFixed(1);
 const fmtLongDate=d=>{if(!d)return '';const x=new Date(String(d).slice(0,10)+'T00:00:00');return isNaN(x)?String(d):x.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});};
 async function loadExtras(classId,termId,sessionId){
@@ -7941,10 +8011,10 @@ function buildReport(student,all,termId,sessionId,classId){
   '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="'+th+';text-align:left">Subject</th><th style="'+th+'">Test 1<br>/'+SC.t1+'</th><th style="'+th+'">Test 2<br>/'+SC.t2+'</th>'+(SC.senior?'':'<th style="'+th+'">Project<br>/10</th>')+'<th style="'+th+'">'+(SC.senior?'Assign./Project':'Assign.')+'<br>/10</th><th style="'+th+'">Exam<br>/'+SC.ex+'</th><th style="'+th+'">Total<br>/100</th><th style="'+th+'">Grade</th><th style="'+th+'">Class<br>Avg</th><th style="'+th+'">Remark</th></tr></thead><tbody>'+(body||'<tr><td colspan="'+(SC.senior?9:10)+'" style="padding:16px;text-align:center;color:#888">No scores recorded.</td></tr>')+'</tbody></table>'+
   '<div style="margin-top:12px;padding:10px;background:#f8faf9;border-left:4px solid #1a5f2a;font-size:12px"><b>Remark:</b> '+rem+'</div>'+
   '<div style="margin-top:10px;border:1px solid #c9d3cc;border-radius:4px;padding:8px 10px;font-size:12px;min-height:44px;white-space:pre-wrap"><b>Class Teacher\'s Comment:</b> '+esc(XT.tc)+'</div>'+
-  '<div style="margin-top:8px;border:1px solid #c9d3cc;border-radius:4px;padding:8px 10px;font-size:12px;min-height:44px;white-space:pre-wrap"><b>Principal\'s Comment:</b> '+esc(XT.pc)+'</div>'+
+  '<div style="margin-top:8px;border:1px solid #c9d3cc;border-radius:4px;padding:8px 10px;font-size:12px;min-height:44px;white-space:pre-wrap"><b>'+headTitle(classId)+'\'s Comment:</b> '+esc(XT.pc)+'</div>'+
   '<div style="margin-top:10px;font-size:12px"><b>Next Term Begins:</b> '+(XT.next?esc(fmtLongDate(XT.next)):'____________________')+'</div>'+
   '<div style="margin-top:10px;font-size:10px;color:#555">Grading: A+ 95-100 | A 85-94 | B+ 80-84 | B 70-79 | C 60-69 | D 50-59 | E 45-49 | F below 45</div>'+
-  '<div style="display:flex;justify-content:space-between;margin-top:30px;font-size:11px"><div style="border-top:1px solid #555;width:40%;text-align:center;padding-top:3px">Class Teacher</div><div style="border-top:1px solid #555;width:40%;text-align:center;padding-top:3px">Principal</div></div></div>';
+  '<div style="display:flex;justify-content:space-between;margin-top:30px;font-size:11px"><div style="border-top:1px solid #555;width:40%;text-align:center;padding-top:3px">Class Teacher</div><div style="border-top:1px solid #555;width:40%;text-align:center;padding-top:3px">'+headTitle(classId)+'</div></div></div>';
 }
 async function toCanvas(html){
   const h=document.createElement('div');h.style.cssText='position:fixed;left:-10000px;top:0;width:794px;background:#fff';h.innerHTML=html;document.body.appendChild(h);
@@ -8079,9 +8149,9 @@ window.tsCLoad=async function(){
   const hasAtt=att&&att.ok&&att.opened>0;
   const ta=(cls,sid,val,dis)=>'<textarea class="'+cls+'" data-sid="'+esc(sid)+'" rows="2" maxlength="600" style="width:100%;min-width:220px;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:.85rem"'+(dis?' disabled':'')+'>'+esc(val||'')+'</textarea>';
   $('tsCWrap').innerHTML=(hasAtt?'':'<div class="rg-warn" style="margin-bottom:10px">No attendance has been marked in the Class Register for this class and term yet, so days present will show “-” on the report card.</div>')+
-   '<table class="ts-grid"><thead><tr><th>#</th><th style="text-align:left">Student</th><th>Gender</th><th>Days Present</th><th style="text-align:left">Class Teacher\'s Comment</th>'+(isAdmin()?'<th style="text-align:left">Principal\'s Comment</th>':'')+'</tr></thead><tbody>'+
+   '<table class="ts-grid"><thead><tr><th>#</th><th style="text-align:left">Student</th><th>Gender</th><th>Days Present</th><th style="text-align:left">Class Teacher\'s Comment</th>'+(isAdmin()?'<th style="text-align:left">'+headTitle(c)+'\'s Comment</th>':'')+'</tr></thead><tbody>'+
    list.map((s,i)=>{const x=com[String(s.id)]||{},a=hasAtt?(att.by[String(s.id)]||{p:0}):null;
-     return '<tr data-sid="'+esc(s.id)+'"><td data-label="#">'+(i+1)+'</td><td data-label="Student" style="text-align:left">'+esc(s.name)+'</td><td data-label="Gender">'+esc(window.ngisGenderLabel?window.ngisGenderLabel(s):'-')+'</td><td data-label="Days Present">'+(a?fmtDays(a.p/2):'-')+'</td><td data-label="Class Teacher\'s Comment">'+ta('tsC-t',s.id,x.teacher_comment,false)+'</td>'+(isAdmin()?'<td data-label="Principal\'s Comment">'+ta('tsC-p',s.id,x.principal_comment,false)+'</td>':'')+'</tr>';}).join('')+'</tbody></table>';
+     return '<tr data-sid="'+esc(s.id)+'"><td data-label="#">'+(i+1)+'</td><td data-label="Student" style="text-align:left">'+esc(s.name)+'</td><td data-label="Gender">'+esc(window.ngisGenderLabel?window.ngisGenderLabel(s):'-')+'</td><td data-label="Days Present">'+(a?fmtDays(a.p/2):'-')+'</td><td data-label="Class Teacher\'s Comment">'+ta('tsC-t',s.id,x.teacher_comment,false)+'</td>'+(isAdmin()?'<td data-label="'+headTitle(c)+'\'s Comment">'+ta('tsC-p',s.id,x.principal_comment,false)+'</td>':'')+'</tr>';}).join('')+'</tbody></table>';
   $('tsCActions').style.display='flex';
 };
 window.tsCSave=async function(){
@@ -11261,12 +11331,444 @@ window.ngisOtherReportFiles=async function(classId,sessionId,weekIds){
 };
 Object.assign(window,{buildNurseryPdfBytes,buildSheetData,clearNurserySheet,crc32,deleteAllNurseryData,deleteNurseryObservation,downloadNurseryPdf,downloadNurseryZip,emtBuild,emtClassChange,emtClear,emtDelete,emtDownloadPdf,emtDownloadZip,emtExportWord,emtFileSafe,emtFillStudents,emtFmtDate,emtFormData,emtHtml,emtLoad,emtLoadSheet,emtOpen,emtPdfBytes,emtPopulate,emtPreview,emtReadRatings,emtRecData,emtRenderForm,emtRenderTable,emtSave,emtSel,emtTeacherFor,emtTick,emtUpdateZipInfo,emtWrap,emtWriteRatings,emtZipRecords,ensurePdfLib,exportNurseryReport,formSheetData,generateNurseryReport,groupToSheetData,loadNurseryObservations,loadNurserySheet,loadNurseryStudents,loadScriptOnce,makeZip,monBadge,monChips,monCompute,monDefaultWeek,monSortedWeeks,monToday,monWeeksToDate,nCanManageSubjects,nInsertSubject,nurseryAddStandardSubjects,nurseryAddSubject,nurseryCloseSubject,nurseryDeleteSubject,nurseryDocWrap,nurseryOpenSubject,nurserySelection,nurserySheetFile,nurserySheetHtml,nurseryZipGroups,onNurseryTick,openObsMonitor,populateNurseryControls,populateObsMonitorControls,promoteNurseryLearners,readNurseryRows,refreshNurseryUI,registerNurseryLearner,renderNurseryObservationsTable,renderNurseryRegister,renderNurserySheetForm,renderNurserySubjectsAdmin,renderObsMonitor,saveNurseryEdit,saveNurserySheet,setMonTab,sheetSubjects,subjectBlockHtml,suggestNextClass,toggleNurseryAll,updateNurseryField,updateNurseryLevel,updateZipInfo,writeNurseryRows});
 
+/* ===== NURSERY END-OF-TERM REPORT CARD (Montessori) =====
+   Teachers type the topics taught this term under each of the nine learning areas (Step 1).
+   Only those topics appear on the report. They are graded with the same four levels the weekly
+   nursery observation sheet uses: Introduced / Developing / Progressing Well / Mastered (Step 2). */
+const NTR_AREAS=[
+  {k:'practical',n:'Practical Life',i:'🧺',c:'#FF8A65',ph:'Pouring water\nButtoning and zipping\nSpooning beans'},
+  {k:'sensorial',n:'Sensorial',i:'🧩',c:'#F5B21B',ph:'Pink tower\nColour tablets\nBinomial cube'},
+  {k:'math',n:'Mathematics',i:'🔢',c:'#29B6F6',ph:'Number rods 1-10\nSandpaper numerals\nCounting beads'},
+  {k:'english',n:'English Language',i:'🔤',c:'#AB63D6',ph:'Letter sounds a-m\nSandpaper letters\nRhyming words'},
+  {k:'cultural',n:'Cultural Education',i:'🌍',c:'#4CAF50',ph:'Land and water forms\nParts of a plant\nCommunity helpers'},
+  {k:'social',n:'Social Grace & Courtesy',i:'🤝',c:'#EC5C93',ph:'Greeting politely\nSaying please and thank you\nTaking turns'},
+  {k:'art',n:'Creative Arts',i:'🎨',c:'#FF7043',ph:'Finger painting\nCutting and pasting\nClay modelling'},
+  {k:'music',n:'Music & Movement',i:'🎵',c:'#1FA39A',ph:'Nursery rhymes\nRhythm with instruments\nAction songs'},
+  {k:'physical',n:'Physical Development',i:'🤸',c:'#5C6BC0',ph:'Balancing on the line\nThrowing and catching\nHealth and hygiene habits'}
+];
+const NTR_LC=['#FF9F43','#FFD43B','#8BD450','#2EB872'];      // colour of each level (same order as NURSERY_LEVELS)
+const NTR_MAX_TOPICS=8,NTR_MAX_LEN=60;
+let ntrTopicRows=[],ntrReports=[],ntrBusy=false;
+const ntrEl=id=>document.getElementById(id);
+const ntrKey=v=>String(v==null?'':v);
+const ntrNum=v=>{const n=parseInt(v,10);return isNaN(n)||n<0?null:n;};
+
+/* ---------- report look: scoped CSS, shared by preview, print and PDF ---------- */
+const NTR_CSS=
+".ntr-page{position:relative;width:210mm;height:297mm;overflow:hidden;background:#cfeeff;color:#2b2d42;box-sizing:border-box;font-family:'Nunito','Trebuchet MS','Segoe UI',Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}"+
+".ntr-page *{box-sizing:border-box;margin:0;padding:0}"+
+".ntr-bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block}"+
+".ntr-logo{position:absolute;left:95mm;top:18mm;width:20mm;height:20mm;object-fit:contain}"+
+".ntr-content{position:absolute;left:9mm;right:9mm;top:43mm;bottom:27mm;font-size:3.3mm;line-height:1.25;display:flex;flex-direction:column;gap:.6em;overflow:hidden}"+
+".ntr-content>*{flex-shrink:0}"+
+".ntr-title{text-align:center}"+
+".ntr-school{font-family:'Baloo 2','Nunito',Arial,sans-serif;font-weight:800;font-size:1.2em;line-height:1.1;letter-spacing:.05em;color:#1b4f8f;text-transform:uppercase}"+
+".ntr-ribbon{display:inline-block;margin-top:.3em;padding:.2em 1.7em;background:linear-gradient(90deg,#ff6f9f,#ff9f43);color:#fff;border-radius:2em;font-family:'Baloo 2','Nunito',Arial,sans-serif;font-weight:800;font-size:1.25em;line-height:1.3;letter-spacing:.03em;text-shadow:0 .2mm 0 rgba(0,0,0,.2);box-shadow:0 .5mm 0 rgba(0,0,0,.16)}"+
+".ntr-info{display:grid;grid-template-columns:1.7fr 1fr 1.15fr;gap:.35em .8em;background:rgba(255,255,255,.94);border:.5mm solid #7cc4f0;border-radius:3mm;padding:.45em .9em}"+
+".ntr-i small{display:block;font-size:.7em;font-weight:800;color:#5b7aa6;text-transform:uppercase;letter-spacing:.05em}"+
+".ntr-i b{display:block;border-bottom:.3mm dotted #8fb4d6;min-height:1.3em;font-weight:800;font-size:1.05em;color:#1d2b53;overflow-wrap:anywhere}"+
+".ntr-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:.2em 1.1em;font-size:.85em;font-weight:700;color:#334;background:rgba(255,255,255,.9);border-radius:2em;padding:.25em .9em;align-self:center}"+
+".ntr-lg{display:inline-flex;align-items:center;gap:.35em;white-space:nowrap}"+
+".ntr-lg i{display:inline-block;width:1.05em;height:1.05em;border-radius:50%;border:.25mm solid rgba(0,0,0,.2)}"+
+".ntr-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6em}"+
+".ntr-area{background:rgba(255,255,255,.95);border:.5mm solid #ccc;border-radius:3mm;overflow:hidden;min-width:0}"+
+".ntr-area.wide{grid-column:1/-1}"+
+".ntr-ah{display:flex;align-items:center;gap:.35em;color:#fff;font-weight:800;padding:.2em 0 .2em .6em;min-height:1.9em}"+
+".ntr-ai{font-size:1.15em;line-height:1}"+
+".ntr-an{flex:1;min-width:0;font-size:1em;text-shadow:0 .2mm 0 rgba(0,0,0,.18)}"+
+".ntr-ao{font-size:.68em;font-weight:800;color:#2b2d42;background:#fff;border-radius:2em;padding:.05em .7em;white-space:nowrap;border:.3mm solid rgba(0,0,0,.12);margin-right:.3em}"+
+".ntr-ao i{display:inline-block;width:.8em;height:.8em;border-radius:50%;margin-right:.3em;vertical-align:-.08em}"+
+".ntr-ha{display:flex;gap:0}"+
+".ntr-ha span{width:3.25em;text-align:center;font-size:.8em;font-weight:800;color:#2b2d42;line-height:1.55}"+
+".ntr-ha span b{display:inline-block;width:1.55em;height:1.55em;border-radius:50%;background:#fff;line-height:1.55em;text-align:center}"+
+".ntr-t{width:100%;border-collapse:collapse;table-layout:fixed}"+
+".ntr-t td{padding:.2em .45em;border-bottom:.2mm dashed #cfdcea;vertical-align:middle;font-size:.95em;font-weight:600;line-height:1.2;overflow-wrap:anywhere}"+
+".ntr-t tr:last-child td{border-bottom:0}"+
+".ntr-t td.ntr-lv{width:2.6em;text-align:center;padding:.2em 0}"+
+".ntr-d{display:inline-block;width:1.15em;height:1.15em;border-radius:50%;border:.3mm solid #c3d0df;background:#fff;vertical-align:middle}"+
+".ntr-d.on{border-color:rgba(0,0,0,.2)}"+
+".ntr-cm{display:grid;grid-template-columns:1fr 1fr;gap:.6em}"+
+".ntr-cb{background:rgba(255,255,255,.95);border:.5mm solid #ffb86b;border-radius:3mm;padding:.35em .7em;min-height:5.6em}"+
+".ntr-cb h4{font-size:.74em;font-weight:800;color:#d9480f;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.15em}"+
+".ntr-cb p{font-size:.92em;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.25}"+
+".ntr-sig{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.4em;padding:0 .6em}"+
+".ntr-sg{text-align:center}"+
+".ntr-sg div{border-bottom:.3mm solid #44506a;min-height:1.5em;font-weight:800;font-size:.95em;color:#1d2b53}"+
+".ntr-sg span{font-size:.72em;font-weight:800;color:#44506a;text-transform:uppercase;letter-spacing:.04em}"+
+".ntr-none{background:rgba(255,255,255,.95);border-radius:3mm;padding:1em;text-align:center;font-weight:700}";
+
+/* ---------- cartoon background (inline SVG, A4 in mm units) ---------- */
+function ntrStar(x,y,R,fill,op){const p=[];for(let i=0;i<10;i++){const r=i%2?R*.45:R,a=-Math.PI/2+i*Math.PI/5;p.push((x+r*Math.cos(a)).toFixed(2)+','+(y+r*Math.sin(a)).toFixed(2));}return '<polygon points="'+p.join(' ')+'" fill="'+fill+'" opacity="'+(op||1)+'"/>';}
+function ntrCloud(x,y,s,face){
+  return '<g transform="translate('+x+' '+y+') scale('+s+')"><g fill="#fff"><circle cx="-8" cy="2" r="6"/><circle cx="0" cy="-3" r="8"/><circle cx="9" cy="1" r="6.5"/><rect x="-14" y="1" width="30" height="8" rx="4"/></g>'+
+   (face?'<circle cx="-3.6" cy="3" r=".9" fill="#334"/><circle cx="3.6" cy="3" r=".9" fill="#334"/><path d="M-2 5.4q2 2 4 0" stroke="#334" stroke-width=".7" fill="none" stroke-linecap="round"/><circle cx="-6.4" cy="5.4" r="1.3" fill="#ff9aa8" opacity=".75"/><circle cx="6.4" cy="5.4" r="1.3" fill="#ff9aa8" opacity=".75"/>':'')+'</g>';
+}
+function ntrSun(x,y){
+  let r='';for(let i=0;i<12;i++)r+='<line x1="0" y1="-10.5" x2="0" y2="-14" transform="rotate('+(i*30)+')"/>';
+  return '<g transform="translate('+x+' '+y+')"><g stroke="#ffb703" stroke-width="1.7" stroke-linecap="round">'+r+'</g><circle r="8" fill="#ffd43b" stroke="#ffb703" stroke-width=".8"/><circle cx="-2.8" cy="-1" r=".95" fill="#334"/><circle cx="2.8" cy="-1" r=".95" fill="#334"/><path d="M-3 2q3 3.2 6 0" stroke="#334" stroke-width=".8" fill="none" stroke-linecap="round"/><circle cx="-5" cy="2" r="1.5" fill="#ff8fa3" opacity=".65"/><circle cx="5" cy="2" r="1.5" fill="#ff8fa3" opacity=".65"/></g>';
+}
+function ntrBalloon(x,y,c,s){
+  return '<g transform="translate('+x+' '+y+') scale('+(s||1)+')"><path d="M0 8.2q-3 6 1 13q3 5 0 9" fill="none" stroke="#7a869a" stroke-width=".4"/><ellipse rx="5" ry="6" fill="'+c+'"/><path d="M0 5.8l-1.4 2.4h2.8z" fill="'+c+'"/><ellipse cx="-1.8" cy="-2" rx="1" ry="1.8" fill="#fff" opacity=".55" transform="rotate(20 -1.8 -2)"/></g>';
+}
+function ntrFlower(x,y,c,s){
+  let p='';for(let i=0;i<5;i++){const a=i*72*Math.PI/180;p+='<circle cx="'+(2.2*Math.sin(a)).toFixed(2)+'" cy="'+(-2.2*Math.cos(a)).toFixed(2)+'" r="1.9" fill="'+c+'"/>';}
+  return '<g transform="translate('+x+' '+y+') scale('+s+')"><path d="M0 0q-.6 6 .4 12" stroke="#3a9d3a" stroke-width=".7" fill="none"/><path d="M.1 6q3-2.5 4.5-.5q-2.5 2.5-4.5.5z" fill="#4cb84c"/>'+p+'<circle r="1.3" fill="#fff4b0"/></g>';
+}
+function ntrLadybug(x,y){
+  return '<g transform="translate('+x+' '+y+')"><path d="M3.6 -.8l1.8 -1.6M3.6 .8l1.8 1.6" stroke="#222" stroke-width=".3"/><ellipse rx="3.6" ry="2.9" fill="#e63946"/><circle cx="3.4" r="1.5" fill="#222"/><path d="M-3.4 0H3" stroke="#222" stroke-width=".35"/><g fill="#222"><circle cx="-1.3" cy="-1.3" r=".6"/><circle cx="1" cy="-1.5" r=".55"/><circle cx="-1.3" cy="1.3" r=".6"/><circle cx="1" cy="1.5" r=".55"/></g></g>';
+}
+function ntrBee(x,y){
+  return '<g transform="translate('+x+' '+y+')"><ellipse cx="-1.6" cy="-3.6" rx="2.3" ry="3" fill="#e8f6ff" stroke="#9ccbe6" stroke-width=".3" transform="rotate(-25 -1.6 -3.6)"/><ellipse cx="1.4" cy="-3.8" rx="2.3" ry="3" fill="#e8f6ff" stroke="#9ccbe6" stroke-width=".3" transform="rotate(15 1.4 -3.8)"/><ellipse rx="4.6" ry="3.2" fill="#ffd43b"/><path d="M-1.4 -3v6M1.3 -3.1v6.2" stroke="#2b2b2b" stroke-width="1.1"/><circle cx="3.1" cy="-.7" r=".65" fill="#222"/><path d="M3.3 .9q.9.6 1.6 0" stroke="#222" stroke-width=".3" fill="none"/><path d="M-4.6 0l-1.6.3" stroke="#2b2b2b" stroke-width=".6" stroke-linecap="round"/></g>';
+}
+function ntrButterfly(x,y){
+  return '<g transform="translate('+x+' '+y+')"><ellipse cx="-3.2" cy="-2" rx="3.3" ry="2.4" fill="#ff8fab" transform="rotate(-30 -3.2 -2)"/><ellipse cx="3.2" cy="-2" rx="3.3" ry="2.4" fill="#ff8fab" transform="rotate(30 3.2 -2)"/><ellipse cx="-2.5" cy="2" rx="2.4" ry="1.8" fill="#ffc2d1" transform="rotate(25 -2.5 2)"/><ellipse cx="2.5" cy="2" rx="2.4" ry="1.8" fill="#ffc2d1" transform="rotate(-25 2.5 2)"/><circle cx="-3.2" cy="-2" r=".9" fill="#fff" opacity=".7"/><circle cx="3.2" cy="-2" r=".9" fill="#fff" opacity=".7"/><rect x="-.5" y="-3.6" width="1" height="8" rx=".5" fill="#4a3b5c"/><path d="M-.3 -3.4q-1-2-2-2.3M.3 -3.4q1-2 2-2.3" stroke="#4a3b5c" stroke-width=".3" fill="none"/></g>';
+}
+function ntrBear(x,y,s){
+  const f='#c98e5a',l='#f0cfa0';
+  return '<g transform="translate('+x+' '+y+') scale('+s+')"><ellipse cx="0" cy="12.5" rx="5.6" ry="6" fill="'+f+'"/><ellipse cx="0" cy="13" rx="3.3" ry="4" fill="'+l+'"/><circle cx="-5.6" cy="10" r="2.1" fill="'+f+'"/><circle cx="5.6" cy="10" r="2.1" fill="'+f+'"/><ellipse cx="-3" cy="18" rx="2.5" ry="2" fill="'+f+'"/><ellipse cx="3" cy="18" rx="2.5" ry="2" fill="'+f+'"/>'+
+   '<circle cx="-5" cy="-4.4" r="2.5" fill="'+f+'"/><circle cx="5" cy="-4.4" r="2.5" fill="'+f+'"/><circle cx="-5" cy="-4.4" r="1.2" fill="#e8b98a"/><circle cx="5" cy="-4.4" r="1.2" fill="#e8b98a"/><circle r="6.2" fill="'+f+'"/><ellipse cy="2" rx="3.1" ry="2.5" fill="'+l+'"/><ellipse cy=".9" rx="1.1" ry=".8" fill="#4a2c1a"/><circle cx="-2.3" cy="-1.3" r=".8" fill="#2b1a10"/><circle cx="2.3" cy="-1.3" r=".8" fill="#2b1a10"/><path d="M0 1.7v.9M-1.2 3.1q1.2.8 2.4 0" stroke="#4a2c1a" stroke-width=".4" fill="none"/><circle cx="-4" cy="1.6" r="1" fill="#ff9aa8" opacity=".6"/><circle cx="4" cy="1.6" r="1" fill="#ff9aa8" opacity=".6"/>'+
+   '<path d="M0 6.8l-3-1.6v3.2zM0 6.8l3-1.6v3.2z" fill="#e63946"/><circle cx="0" cy="6.8" r=".9" fill="#c1121f"/></g>';
+}
+function ntrBlock(x,y,c,ch,rot){
+  return '<g transform="rotate('+(rot||0)+' '+(x+4)+' '+(y+4)+')"><rect x="'+x+'" y="'+y+'" width="8" height="8" rx="1.2" fill="'+c+'" stroke="rgba(0,0,0,.18)" stroke-width=".3"/><text x="'+(x+4)+'" y="'+(y+6.1)+'" font-size="5.6" font-weight="800" font-family="Arial,sans-serif" fill="#fff" text-anchor="middle">'+ch+'</text></g>';
+}
+function ntrBgSvg(){
+  let s='<svg class="ntr-bg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 297" preserveAspectRatio="none"><defs>'+
+   '<linearGradient id="ntrSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fcbfa"/><stop offset=".42" stop-color="#cdeeff"/><stop offset=".82" stop-color="#f1fbe0"/><stop offset="1" stop-color="#d6f2b4"/></linearGradient>'+
+   '<pattern id="ntrDots" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".9" fill="#fff" opacity=".6"/><circle cx="6.5" cy="6.5" r=".9" fill="#fff" opacity=".4"/></pattern></defs>'+
+   '<rect width="210" height="297" fill="url(#ntrSky)"/><rect width="210" height="297" fill="url(#ntrDots)"/>';
+  s+=ntrCloud(160,13,.85,true)+ntrCloud(52,10,.6,false)+ntrCloud(34,40,.5,false)+ntrCloud(196,50,.5,false)+ntrSun(21,18);
+  const rc=['#ff6b6b','#ffa94d','#ffe066','#69db7c','#74c0fc'];
+  s+='<g fill="none" stroke-width="3.1">';rc.forEach((c,i)=>{const r=28-i*3.1;s+='<path d="M'+(105-r).toFixed(1)+' 28A'+r.toFixed(1)+' '+r.toFixed(1)+' 0 0 1 '+(105+r).toFixed(1)+' 28" stroke="'+c+'"/>';});s+='</g>';
+  s+='<circle cx="105" cy="28" r="13.4" fill="#fff"/><circle cx="105" cy="28" r="13.4" fill="none" stroke="#ffd1e0" stroke-width=".8" stroke-dasharray="1.2 1.4"/>';
+  s+=ntrBalloon(188,10,'#ff6b6b',.95)+ntrBalloon(198,16,'#4dabf7',.85)+ntrBalloon(179,19,'#ffd43b',.8);
+  [[70,22,2.2,'#ffd43b'],[142,30,1.8,'#ffffff'],[8,58,1.7,'#ffd43b'],[203,86,1.7,'#ffffff'],[6,126,1.5,'#ffffff'],[204,150,1.6,'#ffd43b'],[7,200,1.7,'#ffd43b'],[203,214,1.5,'#ffffff'],[120,8,1.5,'#ffd43b'],[86,36,1.3,'#ffffff']].forEach(a=>{s+=ntrStar(a[0],a[1],a[2],a[3],.95);});
+  s+='<rect x="3" y="3" width="204" height="291" rx="9" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="1.3 2.3" stroke-linecap="round"/>';
+  s+='<path d="M0 276C35 266 75 272 110 277C145 282 180 270 210 274V297H0Z" fill="#a6e86a"/>';
+  s+='<path d="M0 286C40 277 85 290 125 285C160 281 190 287 210 283V297H0Z" fill="#6cc84a"/>';
+  s+='<path d="M0 291C45 285 90 294 130 291C165 288 190 292 210 290V297H0Z" fill="#58b83a"/>';
+  [[40,284,'#ff6b9d',.8],[78,282,'#ffd43b',.7],[104,284,'#ffffff',.7],[136,281,'#ff8fab',.8],[172,282,'#ffa94d',.75],[8,284,'#ffd43b',.7],[201,282,'#ff6b9d',.7]].forEach(f=>{s+=ntrFlower(f[0],f[1],f[2],f[3]);});
+  s+=ntrBlock(12,278,'#ef476f','A',-4)+ntrBlock(21,278,'#118ab2','B',3)+ntrBlock(16.5,270,'#f4a300','C',-6);
+  s+=ntrBear(190,273,.78)+ntrLadybug(62,291)+ntrLadybug(150,292.5)+ntrButterfly(165,273);
+  s+='<path d="M96 279q6 -9 11 -4t10 -6" fill="none" stroke="#7a869a" stroke-width=".4" stroke-dasharray="1 1.3"/>'+ntrBee(121,271);
+  return s+'</svg>';
+}
+
+/* ---------- report page (one A4 page per pupil) ---------- */
+function ntrLevelDot(lv,on){return '<span class="ntr-d'+(on?' on':'')+'"'+(on?' style="background:'+NTR_LC[NURSERY_LEVELS.indexOf(lv)]+'"':'')+'></span>';}
+function ntrPageHtml(d){
+  const L=NURSERY_LEVELS;
+  const legend='<div class="ntr-legend">'+L.map((l,i)=>'<span class="ntr-lg"><i style="background:'+NTR_LC[i]+'"></i><b>'+l[0]+'</b> = '+esc(l)+'</span>').join('')+'</div>';
+  const letters='<div class="ntr-ha">'+L.map(l=>'<span><b>'+l[0]+'</b></span>').join('')+'</div>';
+  const areaHtml=(x,idx,n)=>{
+    const g=x.g||{t:{}},ov=g.o&&L.indexOf(g.o)>-1?g.o:'';
+    const rows=x.topics.map(t=>{const v=(g.t||{})[t];return '<tr><td>'+esc(t)+'</td>'+L.map(l=>'<td class="ntr-lv">'+ntrLevelDot(l,v===l)+'</td>').join('')+'</tr>';}).join('');
+    const wide=(n%2===1&&idx===n-1)?' wide':'';
+    return '<div class="ntr-area'+wide+'" style="border-color:'+x.a.c+'"><div class="ntr-ah" style="background:'+x.a.c+'"><span class="ntr-ai">'+x.a.i+'</span><span class="ntr-an">'+esc(x.a.n)+'</span>'+
+      (ov?'<span class="ntr-ao"><i style="background:'+NTR_LC[L.indexOf(ov)]+'"></i>'+esc(ov)+'</span>':'')+letters+'</div>'+
+      '<table class="ntr-t"><colgroup><col>'+L.map(()=>'<col style="width:2.6em">').join('')+'</colgroup><tbody>'+rows+'</tbody></table></div>';
+  };
+  const att=(d.present!=null&&d.present!=='')||(d.daysOpen!=null&&d.daysOpen!=='')?((d.present!=null&&d.present!==''?d.present:'__')+' out of '+(d.daysOpen!=null&&d.daysOpen!==''?d.daysOpen:'__')+' days'):'';
+  const info=(l,v)=>'<div class="ntr-i"><small>'+l+'</small><b>'+(esc(v)||'&nbsp;')+'</b></div>';
+  const cb=(t,v)=>'<div class="ntr-cb"><h4>'+t+'</h4><p>'+(esc(v)||'')+'</p></div>';
+  const body=d.areas.length?'<div class="ntr-grid">'+d.areas.map((x,i)=>areaHtml(x,i,d.areas.length)).join('')+'</div>':'<div class="ntr-none">No topics have been entered for this term yet.</div>';
+  return '<div class="ntr-page">'+ntrBgSvg()+'<img class="ntr-logo" alt="" src="data:image/png;base64,'+LOGO_B64+'">'+
+    '<div class="ntr-content">'+
+    '<div class="ntr-title"><div class="ntr-school">Nigeria Ghana International School</div><div class="ntr-ribbon">⭐ End of Term Report · Montessori Nursery ⭐</div></div>'+
+    '<div class="ntr-info">'+info('Pupil’s Name',d.studentName)+info('Class',d.className)+info('Term',d.term)+info('Session',d.session)+info('Attendance',att)+info('Next Term Begins',d.nextTerm)+'</div>'+
+    legend+body+
+    '<div class="ntr-cm">'+cb('Class Teacher’s Comment',d.tc)+cb('Head Teacher’s Comment',d.hc)+'</div>'+
+    '<div class="ntr-sig"><div class="ntr-sg"><div>'+esc(d.teacher)+'</div><span>Class Teacher</span></div><div class="ntr-sg"><div>&nbsp;</div><span>Head Teacher</span></div><div class="ntr-sg"><div>'+esc(d.date)+'</div><span>Date</span></div></div>'+
+    '</div></div>';
+}
+/* shrink the text a little (never the layout) until everything fits on the one A4 page */
+function ntrFit(page){
+  const c=page&&page.querySelector('.ntr-content'); if(!c)return;
+  let s=3.8;c.style.fontSize=s+'mm';
+  for(let g=0;g<45&&c.scrollHeight>c.clientHeight+1&&s>2.1;g++){s-=.1;c.style.fontSize=s.toFixed(2)+'mm';}
+}
+function ntrEnsureStyle(){
+  if(!document.getElementById('ntr-report-css')){const st=document.createElement('style');st.id='ntr-report-css';st.textContent=NTR_CSS;document.head.appendChild(st);}
+  if(!document.getElementById('ntr-fonts')){const l=document.createElement('link');l.id='ntr-fonts';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap';document.head.appendChild(l);}
+}
+
+/* ---------- context: class, term, pupil ---------- */
+function ntrSel(){return{classId:ntrKey(ntrEl('ntrClass').value),sessionId:ntrKey(ntrEl('ntrSession').value),studentId:ntrKey(ntrEl('ntrStudent').value)};}
+function ntrTopicRow(c,s){return ntrTopicRows.find(r=>ntrKey(r.class_id)===c&&ntrKey(r.session_id)===s)||null;}
+function ntrReportFor(st,s){return ntrReports.find(r=>ntrKey(r.student_id)===st&&ntrKey(r.session_id)===s)||null;}
+function ntrFmtDate(v){if(!v)return '';const d=new Date(String(v).slice(0,10)+'T00:00:00');return isNaN(d)?String(v):d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});}
+function ntrTeacherFor(classId){
+  const names=classTeachers.filter(ct=>ntrKey(ct.class_id)===ntrKey(classId)).map(ct=>teachers.find(t=>ntrKey(t.id)===ntrKey(ct.teacher_id))?.name).filter(Boolean);
+  if(names.length)return [...new Set(names)].join(', ');
+  return (currentUser&&!isAdmin())?currentUser.name:'';
+}
+function ntrWarn(msg){const n=ntrEl('ntrSetupNote');if(n)n.innerHTML=msg?'<div class="ntr-warn">'+msg+'</div>':'';}
+function ntrPopulate(){
+  if(!currentUser||!ntrEl('ntrClass'))return;
+  const mine=myNurseryClasses();
+  const cSel=ntrEl('ntrClass'),curC=cSel.value;
+  cSel.innerHTML='<option value="">'+(mine.length?'-- Choose Nursery Class --':'-- No nursery class assigned to you --')+'</option>'+mine.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('');
+  if(curC&&[...cSel.options].some(o=>o.value===curC))cSel.value=curC;else if(mine.length===1)cSel.value=ntrKey(mine[0].id);
+  const sSel=ntrEl('ntrSession'),keep=sSel.value,cur=nCurrentSession();
+  sSel.innerHTML=nSessions.length?nSessions.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.name)+' - '+esc(x.term)+(x.is_current?' (current)':'')+'</option>').join(''):'<option value="">-- No session set (ask admin) --</option>';
+  if(keep&&nSessions.some(x=>ntrKey(x.id)===keep))sSel.value=keep;else if(cur)sSel.value=ntrKey(cur.id);
+  ntrFillStudents();ntrRenderAll();
+}
+function ntrFillStudents(){
+  const classId=ntrKey(ntrEl('ntrClass').value),sel=ntrEl('ntrStudent'),cur=sel.value;
+  if(!classId||!myNurseryClasses().some(c=>ntrKey(c.id)===classId)){sel.innerHTML='<option value="">-- Choose Pupil --</option>';return;}
+  const list=students.filter(s=>ntrKey(s.class_id)===classId).sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  sel.innerHTML='<option value="">-- Choose Pupil --</option>'+list.map(s=>'<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>').join('');
+  if(cur&&list.some(s=>ntrKey(s.id)===cur))sel.value=cur;
+}
+function ntrClassChange(){ntrFillStudents();ntrEl('ntrTeacher').value='';ntrRenderAll();}
+function ntrContextChange(){ntrRenderAll();}
+function ntrRenderAll(){ntrRenderTopicsForm();ntrRenderCopyOptions();ntrRenderGradeForm();ntrLoadSheet();ntrRenderTable();}
+
+/* ---------- Step 1: topics for the term ---------- */
+function ntrCleanTopics(txt){
+  const seen=new Set(),out=[];
+  String(txt||'').split(/\r?\n/).forEach(l=>{
+    const t=cleanText(l).replace(/^[-•*]+\s*/,'').slice(0,NTR_MAX_LEN).trim();
+    if(t&&!seen.has(t.toLowerCase())&&out.length<NTR_MAX_TOPICS){seen.add(t.toLowerCase());out.push(t);}
+  });
+  return out;
+}
+function ntrRenderTopicsForm(){
+  const host=ntrEl('ntrTopicsForm');if(!host)return;
+  const{classId,sessionId}=ntrSel(),row=classId&&sessionId?ntrTopicRow(classId,sessionId):null,tp=(row&&row.topics)||{};
+  host.innerHTML=NTR_AREAS.map(a=>'<div class="ntr-tcard" style="border-color:'+a.c+'"><label for="ntrTa_'+a.k+'" style="background:'+a.c+'"><span>'+a.i+'</span> '+esc(a.n)+'</label>'+
+    '<textarea id="ntrTa_'+a.k+'" rows="4" maxlength="900" oninput="ntrCountTopics()" placeholder="'+esc('One topic per line, e.g.\n'+a.ph)+'">'+esc((tp[a.k]||[]).join('\n'))+'</textarea></div>').join('');
+  ntrEl('ntrDaysOpen').value=row&&row.days_open!=null?row.days_open:'';
+  ntrEl('ntrNextTerm').value=row&&row.next_term_begins?String(row.next_term_begins).slice(0,10):'';
+  ntrCountTopics();
+}
+function ntrReadTopics(){const t={};NTR_AREAS.forEach(a=>{const l=ntrCleanTopics(ntrEl('ntrTa_'+a.k).value);if(l.length)t[a.k]=l;});return t;}
+function ntrCountTopics(){
+  const el=ntrEl('ntrTopicCount');if(!el)return;
+  const t=ntrReadTopics(),areas=Object.keys(t).length,n=Object.values(t).reduce((s,l)=>s+l.length,0);
+  el.innerHTML=n?'<b>'+n+'</b> topic'+(n>1?'s':'')+' in <b>'+areas+'</b> of 9 learning areas'+(n>36?' &mdash; <span style="color:#b9770e">that is a lot; the report text will shrink to fit one page. About 4 topics per area looks best.</span>':''):'No topics entered yet.';
+}
+function ntrRenderCopyOptions(){
+  const sel=ntrEl('ntrCopyFrom');if(!sel)return;
+  const{classId,sessionId}=ntrSel();
+  const opts=ntrTopicRows.filter(r=>ntrKey(r.class_id)===classId&&ntrKey(r.session_id)!==sessionId&&r.topics&&Object.keys(r.topics).length).map(r=>{const p=nSessions.find(x=>ntrKey(x.id)===ntrKey(r.session_id));return '<option value="'+esc(r.session_id)+'">'+esc(p?p.name+' - '+p.term:'Earlier term')+'</option>';});
+  sel.innerHTML='<option value="">'+(opts.length?'-- Copy topics from an earlier term --':'-- No earlier topics to copy --')+'</option>'+opts.join('');
+}
+function ntrCopyTopics(){
+  const{classId}=ntrSel(),from=ntrEl('ntrCopyFrom').value;
+  const r=from&&ntrTopicRow(classId,ntrKey(from)); if(!r){showToast('Choose an earlier term to copy from','error');return;}
+  NTR_AREAS.forEach(a=>{ntrEl('ntrTa_'+a.k).value=((r.topics||{})[a.k]||[]).join('\n');});
+  ntrCountTopics();showToast('Topics copied. Edit them, then press Save Topics.','info');
+}
+function ntrCanEdit(classId){return !!classId&&myNurseryClasses().some(c=>ntrKey(c.id)===classId);}
+function ntrMissingMsg(m){return /could not find the table|does not exist|schema cache/i.test(m)?'The report tables are missing in Supabase. Run nursery_term_report_setup.sql once in the SQL Editor, then reload. ('+m+')':m;}
+async function ntrSaveTopics(){
+  if(ntrBusy)return;
+  const{classId,sessionId}=ntrSel();
+  if(!classId||!sessionId){showToast('Choose the class and the term first','error');return;}
+  if(!ntrCanEdit(classId)){showToast('You can only set topics for your own nursery class','error');return;}
+  const topics=ntrReadTopics();
+  if(!Object.keys(topics).length&&!confirm('No topics entered. This will clear every topic for this term. Continue?'))return;
+  const row={class_id:classId,session_id:sessionId,topics,days_open:ntrNum(ntrEl('ntrDaysOpen').value),next_term_begins:ntrEl('ntrNextTerm').value||null,updated_by:(currentUser&&(currentUser.name||currentUser.email))||'',updated_at:new Date().toISOString()};
+  ntrBusy=true;
+  try{
+    const res=await supabaseClient.from('nursery_term_topics').upsert(row,{onConflict:'class_id,session_id'}).select();
+    if(res.error)throw res.error;
+    const saved=(res.data&&res.data[0])||row;
+    const i=ntrTopicRows.findIndex(r=>ntrKey(r.class_id)===classId&&ntrKey(r.session_id)===sessionId);
+    if(i>-1)ntrTopicRows[i]=saved;else ntrTopicRows.push(saved);
+    showToast('Term topics saved');
+    ntrRenderAll();
+  }catch(e){console.error(e);showToast('Could not save topics: '+ntrMissingMsg((e&&e.message)||String(e)),'error');}
+  finally{ntrBusy=false;}
+}
+
+/* ---------- Step 2: grade a pupil ---------- */
+function ntrTick(box){if(box.checked)box.closest('.ntr-row').querySelectorAll('.ntr-tick').forEach(c=>{if(c!==box)c.checked=false;});}
+function ntrRenderGradeForm(){
+  const host=ntrEl('ntrGradeForm');if(!host)return;
+  const{classId,sessionId}=ntrSel();
+  if(!classId||!sessionId){host.innerHTML='<div class="ntr-empty">Choose a class and a term above.</div>';return;}
+  const row=ntrTopicRow(classId,sessionId),tp=(row&&row.topics)||{},areas=NTR_AREAS.filter(a=>(tp[a.k]||[]).length);
+  if(!areas.length){host.innerHTML='<div class="ntr-empty">No topics saved for this class and term yet. Enter them in <b>Step 1</b> and press <b>Save Topics</b>; they will then appear here for grading.</div>';return;}
+  const L=NURSERY_LEVELS;
+  const ticks=(extra)=>L.map(l=>'<td style="text-align:center;"><input type="checkbox" class="ntr-tick" value="'+esc(l)+'" onchange="ntrTick(this)" '+extra+'></td>').join('');
+  host.innerHTML=areas.map(a=>{
+    const head='<tr><th style="width:40%;background:'+a.c+'">'+a.i+' '+esc(a.n)+'</th>'+L.map((l,i)=>'<th style="text-align:center;background:'+a.c+'">'+esc(l)+'</th>').join('')+'</tr>';
+    const over='<tr class="ntr-row ntr-over" data-a="'+a.k+'" data-o="1"><td><strong>Overall for this learning area</strong></td>'+ticks('')+'</tr>';
+    const rows=tp[a.k].map(t=>'<tr class="ntr-row" data-a="'+a.k+'" data-t="'+esc(t)+'"><td>'+esc(t)+'</td>'+ticks('')+'</tr>').join('');
+    return '<div class="table-container" style="margin-bottom:14px;"><table class="ntr-gt">'+head+over+rows+'</table></div>';
+  }).join('');
+}
+function ntrReadGrades(){
+  const out={};
+  document.querySelectorAll('#ntrGradeForm .ntr-row').forEach(r=>{
+    const a=r.dataset.a,c=r.querySelector('.ntr-tick:checked');out[a]=out[a]||{o:'',t:{}};
+    if(!c)return;
+    if(r.dataset.o)out[a].o=c.value;else out[a].t[r.dataset.t]=c.value;
+  });
+  Object.keys(out).forEach(k=>{if(!out[k].o&&!Object.keys(out[k].t).length)delete out[k];});
+  return out;
+}
+function ntrWriteGrades(g){
+  g=g||{};
+  document.querySelectorAll('#ntrGradeForm .ntr-row').forEach(r=>{
+    const x=g[r.dataset.a]||{},v=r.dataset.o?x.o:(x.t||{})[r.dataset.t];
+    r.querySelectorAll('.ntr-tick').forEach(c=>c.checked=(c.value===v));
+  });
+}
+function ntrClearSheet(classId){
+  ntrWriteGrades({});
+  ['ntrPresent','ntrTComment','ntrHComment'].forEach(id=>ntrEl(id).value='');
+  ntrEl('ntrTeacher').value=classId?ntrTeacherFor(classId):'';
+  ntrEl('ntrDate').value=new Date().toISOString().slice(0,10);
+}
+function ntrLoadSheet(){
+  const{classId,studentId,sessionId}=ntrSel();
+  ntrClearSheet(classId);
+  if(!classId||!studentId||!sessionId)return;
+  const r=ntrReportFor(studentId,sessionId);if(!r)return;
+  ntrWriteGrades(r.grades);
+  ntrEl('ntrPresent').value=r.days_present!=null?r.days_present:'';
+  ntrEl('ntrTComment').value=r.teacher_comment||'';ntrEl('ntrHComment').value=r.head_comment||'';
+  if(r.class_teacher)ntrEl('ntrTeacher').value=r.class_teacher;
+  if(r.report_date)ntrEl('ntrDate').value=String(r.report_date).slice(0,10);
+}
+async function ntrSaveReport(){
+  if(ntrBusy)return;
+  const{classId,studentId,sessionId}=ntrSel();
+  if(!classId||!studentId||!sessionId){showToast('Choose session, class and pupil','error');return;}
+  if(!ntrCanEdit(classId)){showToast('You can only write reports for your own nursery class','error');return;}
+  const row={student_id:studentId,class_id:classId,session_id:sessionId,class_teacher:cleanText(ntrEl('ntrTeacher').value),report_date:ntrEl('ntrDate').value||null,grades:ntrReadGrades(),days_present:ntrNum(ntrEl('ntrPresent').value),
+    teacher_comment:ntrEl('ntrTComment').value.trim(),head_comment:ntrEl('ntrHComment').value.trim(),updated_by:(currentUser&&(currentUser.name||currentUser.email))||'',updated_at:new Date().toISOString()};
+  ntrBusy=true;
+  try{
+    const res=await supabaseClient.from('nursery_term_reports').upsert(row,{onConflict:'student_id,session_id'}).select();
+    if(res.error)throw res.error;
+    const saved=(res.data&&res.data[0])||row;
+    const i=ntrReports.findIndex(r=>ntrKey(r.student_id)===studentId&&ntrKey(r.session_id)===sessionId);
+    if(i>-1)ntrReports[i]=saved;else ntrReports.unshift(saved);
+    showToast('Term report saved');ntrRenderTable();
+  }catch(e){console.error(e);showToast('Could not save report: '+ntrMissingMsg((e&&e.message)||String(e)),'error');}
+  finally{ntrBusy=false;}
+}
+
+/* ---------- build report data ---------- */
+function ntrBuild(o){
+  const p=nSessions.find(x=>ntrKey(x.id)===ntrKey(o.sessionId))||null,trow=ntrTopicRow(ntrKey(o.classId),ntrKey(o.sessionId))||{},tp=trow.topics||{};
+  return{studentName:(students.find(s=>ntrKey(s.id)===ntrKey(o.studentId))||{}).name||'Unknown pupil',className:(classes.find(c=>ntrKey(c.id)===ntrKey(o.classId))||{}).name||'Class',
+    session:p?p.name:'',term:p?p.term:'',teacher:o.teacher||'',date:ntrFmtDate(o.date),present:o.present,daysOpen:trow.days_open,nextTerm:ntrFmtDate(trow.next_term_begins),
+    areas:NTR_AREAS.filter(a=>(tp[a.k]||[]).length).map(a=>({a,topics:tp[a.k],g:(o.grades||{})[a.k]||{o:'',t:{}}})),tc:o.tc||'',hc:o.hc||''};
+}
+function ntrFormData(){
+  const{classId,studentId,sessionId}=ntrSel();
+  if(!classId||!studentId||!sessionId){showToast('Choose session, class and pupil','error');return null;}
+  const row=ntrTopicRow(classId,sessionId);
+  if(!row||!row.topics||!Object.keys(row.topics).length){showToast('Save the term topics (Step 1) first','error');return null;}
+  return ntrBuild({classId,studentId,sessionId,teacher:ntrEl('ntrTeacher').value,date:ntrEl('ntrDate').value,present:ntrEl('ntrPresent').value,grades:ntrReadGrades(),tc:ntrEl('ntrTComment').value,hc:ntrEl('ntrHComment').value});
+}
+function ntrRecData(r){return ntrBuild({classId:r.class_id,studentId:r.student_id,sessionId:r.session_id,teacher:r.class_teacher,date:r.report_date,present:r.days_present,grades:r.grades,tc:r.teacher_comment,hc:r.head_comment});}
+function ntrClassRecords(){
+  const{classId,sessionId}=ntrSel();
+  if(!classId||!sessionId)return [];
+  return ntrReports.filter(r=>ntrKey(r.class_id)===classId&&ntrKey(r.session_id)===sessionId).map(ntrRecData).sort((a,b)=>a.studentName.localeCompare(b.studentName));
+}
+
+/* ---------- preview, print, PDF ---------- */
+function ntrPreview(){
+  const d=ntrFormData();if(!d)return;
+  ntrEnsureStyle();
+  const host=ntrEl('ntrDisplay');
+  host.innerHTML='<div style="overflow:hidden;max-width:100%;"><div id="ntrCard" style="width:210mm;margin:0 auto;box-shadow:0 6px 26px rgba(0,0,0,.22);">'+ntrPageHtml(d)+'</div></div>';
+  const card=ntrEl('ntrCard');ntrFit(card.querySelector('.ntr-page'));
+  const avail=host.clientWidth||window.innerWidth,a4=210/25.4*96;
+  if(avail<a4+8)card.style.zoom=Math.max(.3,(avail-8)/a4);
+  window.scrollTo({top:host.offsetTop-20,behavior:'smooth'});
+}
+function ntrPrintPages(pagesHtml,title){
+  const f=document.createElement('iframe');f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(f);
+  const doc=f.contentWindow.document;doc.open();
+  doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(title)+'</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap"><style>'+NTR_CSS+'@page{size:A4 portrait;margin:0}html,body{margin:0;padding:0;background:#fff}.ntr-page{page-break-after:always;break-after:page}.ntr-page:last-child{page-break-after:auto;break-after:auto}</style></head><body>'+pagesHtml+'</body></html>');
+  doc.close();
+  const go=()=>{doc.querySelectorAll('.ntr-page').forEach(ntrFit);try{f.contentWindow.focus();f.contentWindow.print();}catch(e){showToast('Could not open the print dialog','error');}setTimeout(()=>f.remove(),120000);};
+  setTimeout(()=>{if(doc.fonts&&doc.fonts.ready)doc.fonts.ready.then(()=>setTimeout(go,200));else go();},300);
+}
+function ntrPrint(all){
+  if(all){const recs=ntrClassRecords();if(!recs.length){showToast('No saved reports for this class and term yet','error');return;}ntrPrintPages(recs.map(ntrPageHtml).join(''),'Nursery End of Term Reports');return;}
+  const d=ntrFormData();if(!d)return;ntrPrintPages(ntrPageHtml(d),'Term Report - '+d.studentName);
+}
+async function ntrMakePdf(pagesHtml,filename){
+  if(typeof html2canvas==='undefined'||!window.jspdf||!window.jspdf.jsPDF){showToast('PDF library is not loaded. Check your internet connection and try again.','error');return;}
+  ntrEnsureStyle();
+  const host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;width:210mm;z-index:-1;';
+  host.innerHTML=pagesHtml;document.body.appendChild(host);
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    const pages=[...host.querySelectorAll('.ntr-page')],pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+    for(let i=0;i<pages.length;i++){
+      ntrFit(pages[i]);await new Promise(r=>requestAnimationFrame(()=>r()));
+      const cv=await html2canvas(pages[i],{scale:1.8,useCORS:true,backgroundColor:'#ffffff',logging:false,width:pages[i].offsetWidth,height:pages[i].offsetHeight,windowWidth:Math.max(document.documentElement.clientWidth,900)});
+      if(i)pdf.addPage('a4','portrait');
+      pdf.addImage(cv.toDataURL('image/jpeg',.92),'JPEG',0,0,210,297,undefined,'FAST');
+    }
+    pdf.save(filename);
+  }finally{host.remove();}
+}
+const ntrSafe=s=>String(s||'x').replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'')||'x';
+async function ntrDownloadPdf(all){
+  if(ntrBusy)return;
+  let html,name;
+  if(all){const recs=ntrClassRecords();if(!recs.length){showToast('No saved reports for this class and term yet','error');return;}html=recs.map(ntrPageHtml).join('');name='NGIS_Nursery_Term_Reports_'+ntrSafe(recs[0].className+'_'+recs[0].term+'_'+recs[0].session)+'.pdf';showToast('Preparing '+recs.length+' report'+(recs.length>1?'s':'')+'. This can take a moment...','info');}
+  else{const d=ntrFormData();if(!d)return;html=ntrPageHtml(d);name='NGIS_Nursery_Term_Report_'+ntrSafe(d.studentName+'_'+d.term+'_'+d.session)+'.pdf';showToast('Preparing PDF...','info');}
+  ntrBusy=true;
+  try{await ntrMakePdf(html,name);}catch(e){console.error(e);showToast('Could not create the PDF: '+((e&&e.message)||e),'error');}
+  finally{ntrBusy=false;}
+}
+
+/* ---------- saved reports list ---------- */
+function ntrRenderTable(){
+  const tb=ntrEl('ntrTable');if(!tb)return;
+  const{classId,sessionId}=ntrSel();
+  const list=ntrReports.filter(r=>(!classId||ntrKey(r.class_id)===classId)&&(!sessionId||ntrKey(r.session_id)===sessionId));
+  tb.innerHTML=list.map((r,i)=>{
+    const st=students.find(s=>ntrKey(s.id)===ntrKey(r.student_id)),cl=classes.find(c=>ntrKey(c.id)===ntrKey(r.class_id)),p=nSessions.find(x=>ntrKey(x.id)===ntrKey(r.session_id));
+    return '<tr><td>'+(i+1)+'</td><td><strong>'+esc(st?st.name:'-')+'</strong></td><td>'+esc(cl?cl.name:'-')+'</td><td>'+esc(p?p.name+' - '+p.term:'-')+'</td><td>'+esc(r.class_teacher||'-')+'</td><td>'+esc(ntrFmtDate(r.report_date)||'-')+'</td>'+
+      '<td style="white-space:nowrap;"><button class="btn btn-secondary btn-sm" title="Open" onclick="ntrOpen(\''+esc(r.id)+'\')"><i class="fas fa-folder-open"></i></button> <button class="btn btn-danger btn-sm" title="Delete" onclick="ntrDelete(\''+esc(r.id)+'\')"><i class="fas fa-trash"></i></button></td></tr>';
+  }).join('')||'<tr><td colspan="7" class="empty-state">No term reports saved for this class and term yet</td></tr>';
+}
+function ntrOpen(id){
+  const r=ntrReports.find(x=>ntrKey(x.id)===ntrKey(id));if(!r)return;
+  ntrEl('ntrClass').value=ntrKey(r.class_id);ntrFillStudents();ntrEl('ntrStudent').value=ntrKey(r.student_id);
+  if([...ntrEl('ntrSession').options].some(o=>o.value===ntrKey(r.session_id)))ntrEl('ntrSession').value=ntrKey(r.session_id);
+  ntrRenderAll();window.scrollTo({top:ntrEl('ntrGradeCard').offsetTop-10,behavior:'smooth'});
+}
+async function ntrDelete(id){
+  if(!confirm('Delete this term report?'))return;
+  const{error}=await supabaseClient.from('nursery_term_reports').delete().eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  ntrReports=ntrReports.filter(r=>ntrKey(r.id)!==ntrKey(id));showToast('Term report deleted');ntrRenderAll();
+}
+async function ntrLoad(){
+  if(!currentUser)return;
+  const ids=myNurseryClasses().map(c=>ntrKey(c.id));
+  if(!ids.length){ntrTopicRows=[];ntrReports=[];ntrRenderAll();ntrWarn('No nursery class is assigned to you. Ask the admin to assign your class.');return;}
+  const[a,b]=await Promise.all([supabaseClient.from('nursery_term_topics').select('*').in('class_id',ids),supabaseClient.from('nursery_term_reports').select('*').in('class_id',ids).order('updated_at',{ascending:false})]);
+  const err=a.error||b.error;
+  if(err){console.warn('nursery term report tables:',err.message);ntrTopicRows=[];ntrReports=[];ntrWarn(esc(ntrMissingMsg(err.message||'')));}
+  else{ntrWarn('');ntrTopicRows=a.data||[];ntrReports=b.data||[];}
+  ntrRenderAll();
+}
+Object.assign(window,{ntrPopulate,ntrLoad,ntrClassChange,ntrContextChange,ntrFillStudents,ntrLoadSheet,ntrCountTopics,ntrCopyTopics,ntrSaveTopics,ntrTick,ntrSaveReport,ntrPreview,ntrPrint,ntrDownloadPdf,ntrOpen,ntrDelete});
+
 /* ===== hooks into the Register app (wrap, never replace) ===== */
 function nHook(name,make){const o=window[name]; if(typeof o!=='function'){console.warn('Nursery module: cannot hook '+name);return;} window[name]=make(o);}
 const N_ADMIN_ONLY=['nurseryMonitorSection','nurserySubjectsSection'];
 const N_TITLES={
   nurseryObservationSection:'<i class="fas fa-seedling"></i> Nursery Observation',
   earlyMidTermSection:'<i class="fas fa-file-signature"></i> Early Years Mid-Term Report',
+  nurseryTermReportSection:'<i class="fas fa-star"></i> Nursery Term Report',
   nurseryRegisterSection:'<i class="fas fa-user-plus"></i> Register Learner',
   nurseryMonitorSection:'<i class="fas fa-clipboard-check"></i> Observation Monitor',
   nurserySubjectsSection:'<i class="fas fa-book"></i> Nursery Subjects'
@@ -11285,6 +11787,7 @@ nHook('showSection',o=>function(id,navEl){
     if(id==='nurseryObservationSection'){nWeekSelect();populateNurseryControls();loadNurseryObservations();}
     if(id==='nurseryRegisterSection'){populateNurseryControls();}
     if(id==='earlyMidTermSection'){emtPopulate();emtLoad();}
+    if(id==='nurseryTermReportSection'){ntrPopulate();ntrLoad();}
     if(id==='nurseryMonitorSection'&&isAdmin()){openObsMonitor();}
     if(id==='nurserySubjectsSection'){renderNurserySubjectsAdmin();}
   }
@@ -12970,7 +13473,7 @@ if($('studentNameInput'))$('studentNameInput').addEventListener('blur',function(
 });
 
 /* ---- FULL BACKUP: one click -> JSON file + ZIP of CSV files ---- */
-const BACKUP_TABLES=['classes','students','teachers','teacher_subjects','class_teachers','subjects','sessions','terms','weeks','assessments','weekly_comments','weekly_topics','midterm_assessments','midterm_remarks','early_midterm_reports','nursery_observations','nursery_week_notes','term_scores','result_blocks','result_publications','teacher_feedback','teacher_applications','quizzes','quiz_questions','quiz_attempts','assignments','assignment_submissions','enotes','enote_comments','enote_reads','lesson_plans','lesson_plan_comments','lesson_plan_files','departments','department_members','exam_inbox','exam_inbox_files','daily_story_class','daily_story_student','mgmt_data','mgmt_users','register_attendance','register_week_meta','register_students','term_report_comments','term_report_settings'];
+const BACKUP_TABLES=['classes','students','teachers','teacher_subjects','class_teachers','subjects','sessions','terms','weeks','assessments','weekly_comments','weekly_topics','midterm_assessments','midterm_remarks','early_midterm_reports','nursery_observations','nursery_week_notes','nursery_term_topics','nursery_term_reports','term_scores','result_blocks','result_publications','teacher_feedback','teacher_applications','quizzes','quiz_questions','quiz_attempts','assignments','assignment_submissions','enotes','enote_comments','enote_reads','lesson_plans','lesson_plan_comments','lesson_plan_files','departments','department_members','exam_inbox','exam_inbox_files','daily_story_class','daily_story_student','mgmt_data','mgmt_users','register_attendance','register_week_meta','register_students','term_report_comments','term_report_settings'];
 async function pullTable(t){
   let out=[],from=0;
   for(;;){
@@ -13059,7 +13562,7 @@ window.ngisBackupAll=async function(){
 const $=id=>document.getElementById(id);
 const E=v=>escapeHtml(v);
 /* parents first so links between records stay valid */
-const ORDER=['classes','subjects','sessions','terms','weeks','teachers','students','teacher_subjects','class_teachers','departments','department_members','assessments','weekly_comments','weekly_topics','midterm_assessments','midterm_remarks','early_midterm_reports','nursery_observations','nursery_week_notes','term_scores','result_blocks','result_publications','teacher_feedback','teacher_applications','quizzes','quiz_questions','quiz_attempts','assignments','assignment_submissions','enotes','enote_comments','enote_reads','lesson_plans','lesson_plan_comments','lesson_plan_files','exam_inbox','exam_inbox_files','daily_story_class','daily_story_student','mgmt_data','mgmt_users','register_attendance','register_week_meta','register_students','term_report_comments','term_report_settings'];
+const ORDER=['classes','subjects','sessions','terms','weeks','teachers','students','teacher_subjects','class_teachers','departments','department_members','assessments','weekly_comments','weekly_topics','midterm_assessments','midterm_remarks','early_midterm_reports','nursery_observations','nursery_week_notes','nursery_term_topics','nursery_term_reports','term_scores','result_blocks','result_publications','teacher_feedback','teacher_applications','quizzes','quiz_questions','quiz_attempts','assignments','assignment_submissions','enotes','enote_comments','enote_reads','lesson_plans','lesson_plan_comments','lesson_plan_files','exam_inbox','exam_inbox_files','daily_story_class','daily_story_student','mgmt_data','mgmt_users','register_attendance','register_week_meta','register_students','term_report_comments','term_report_settings'];
 let loaded=null,fileName='';
 function parseCsv(text){
   text=String(text||'').replace(/^\ufeff/,'');
