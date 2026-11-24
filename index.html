@@ -11346,7 +11346,7 @@ const NTR_AREAS=[
   {k:'social',n:'Social Grace & Courtesy',i:'\uD83E\uDD1D',c:'#D9547E',ph:'Greeting politely\nSaying please and thank you\nTaking turns'}
 ];
 const NTR_LC=['#FF9F43','#FFD43B','#8BD450','#2EB872'];      // colour of each level (same order as NURSERY_LEVELS)
-const NTR_MAX_TOPICS=10,NTR_MAX_LEN=600;
+const NTR_MAX_TOPICS=30,NTR_MAX_LEN=600;
 let ntrTopicRows=[],ntrReports=[],ntrBusy=false;
 const ntrEl=id=>document.getElementById(id);
 const ntrKey=v=>String(v==null?'':v);
@@ -11584,7 +11584,7 @@ function ntrPageHtml(d){
 function ntrFit(page){
   const c=page&&page.querySelector('.ntr-content'); if(!c)return;
   let s=3.8;c.style.fontSize=s+'mm';
-  for(let g=0;g<45&&c.scrollHeight>c.clientHeight+1&&s>2.1;g++){s-=.1;c.style.fontSize=s.toFixed(2)+'mm';}
+  for(let g=0;g<60&&c.scrollHeight>c.clientHeight+1&&s>1.8;g++){s-=.1;c.style.fontSize=s.toFixed(2)+'mm';}
 }
 function ntrEnsureStyle(){
   if(!document.getElementById('ntr-report-css')){const st=document.createElement('style');st.id='ntr-report-css';st.textContent=NTR_CSS;document.head.appendChild(st);}
@@ -11648,7 +11648,7 @@ function ntrReadTopics(){const t={};NTR_AREAS.forEach(a=>{const l=ntrCleanTopics
 function ntrCountTopics(){
   const el=ntrEl('ntrTopicCount');if(!el)return;
   const t=ntrReadTopics(),areas=Object.keys(t).length,n=Object.values(t).reduce((s,l)=>s+l.length,0);
-  el.innerHTML=n?'<b>'+n+'</b> topic'+(n>1?'s':'')+' in <b>'+areas+'</b> of '+NTR_AREAS.length+' learning areas'+(n>40?' &mdash; <span style="color:#b9770e">that is a lot; the report text will shrink to fit one page. About 4 topics per area looks best.</span>':''):'No topics entered yet.';
+  el.innerHTML=n?'<b>'+n+'</b> topic'+(n>1?'s':'')+' in <b>'+areas+'</b> of '+NTR_AREAS.length+' learning areas'+(n>90?' &mdash; <span style="color:#b9770e">that is a lot; the report text will shrink to fit one page. Fewer topics per area keeps the report easier to read.</span>':''):'No topics entered yet.';
 }
 function ntrRenderCopyOptions(){
   const sel=ntrEl('ntrCopyFrom');if(!sel)return;
