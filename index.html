@@ -1681,6 +1681,13 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <div id="tsCStatus" style="margin-bottom:10px"></div>
 <div id="tsCWrap" class="ts-scroll"></div>
 <div id="tsCActions" class="ts-btnrow" style="display:none;justify-content:flex-end"><button class="btn btn-primary" onclick="tsCSave()"><i class="fas fa-save"></i> Save Comments</button></div>
+<div id="tsTBox" style="display:none;margin-top:26px;border-top:2px solid #e0e0e0;padding-top:16px">
+<h3 style="margin:0 0 6px"><i class="fas fa-star"></i> Affective Domain &amp; Psychomotor Skills</h3>
+<div class="ts-note" style="margin-bottom:10px">Rate each pupil for every trait using <b>A, B, C, D or F</b>. The rating is ticked on the termly report card. <b>Key:</b> A = Excellent, B = Very Good, C = Good, D = Fair, F = Poor.</div>
+<div id="tsTStatus" style="margin-bottom:10px"></div>
+<div id="tsTWrap" class="ts-scroll"></div>
+<div id="tsTActions" class="ts-btnrow" style="display:none;justify-content:flex-end"><button class="btn btn-primary" onclick="tsTSave()"><i class="fas fa-save"></i> Save Ratings</button></div>
+</div>
 </div></div>
 
 <div id="notifyCenter" class="section hidden"><div class="card">
@@ -7964,8 +7971,19 @@ const RX={};const rxKey=(c,t,se)=>[c,t,se].map(String).join('|');
 const headTitle=classId=>{const c=(classes||[]).find(x=>sameId(x.id,classId));let k=null;try{k=ngisSectionOfClass(c&&c.name);}catch(_){}return(k==='nursery'||k==='primary')?'Head Teacher':'Principal';};
 const fmtDays=n=>Number.isInteger(n)?String(n):n.toFixed(1);
 const fmtLongDate=d=>{if(!d)return '';const x=new Date(String(d).slice(0,10)+'T00:00:00');return isNaN(x)?String(d):x.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});};
+const TRAITS_AFF=[['honesty','Honesty'],['punctuality','Punctuality'],['neatness','Neatness'],['leadership','Leadership Skills'],['emotional','Emotional Stability']];
+const TRAITS_PSY=[['precision','Precision'],['handwriting','Handwriting'],['dexterity','Dexterity'],['sport','Sport'],['tools','Handling of Tools'],['drawing','Drawing / Painting'],['musical','Musical Skills']];
+const TRAIT_LETTERS=['A','B','C','D','F'];
+function traitsHtml(r){
+  r=r||{};
+  const bd='border:1px solid #ccc;padding:3px 2px;text-align:center;font-size:11px';
+  const tbl=(title,list)=>'<table style="width:100%;border-collapse:collapse"><thead><tr><th style="background:#1a5f2a;color:#fff;padding:5px 6px;font-size:11px;border:1px solid #1a5f2a;text-align:left">'+title+'</th>'+TRAIT_LETTERS.map(l=>'<th style="background:#1a5f2a;color:#fff;padding:5px 2px;font-size:11px;border:1px solid #1a5f2a;width:22px">'+l+'</th>').join('')+'</tr></thead><tbody>'+
+    list.map(t=>'<tr><td style="'+bd+';text-align:left;padding-left:6px">'+t[1]+'</td>'+TRAIT_LETTERS.map(l=>'<td style="'+bd+';font-weight:700;font-size:13px">'+(r[t[0]]===l?'&#10003;':'')+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+  return '<div style="display:flex;gap:12px;margin-top:12px;align-items:flex-start"><div style="flex:1">'+tbl('AFFECTIVE DOMAIN',TRAITS_AFF)+'</div><div style="flex:1">'+tbl('PSYCHOMOTOR SKILLS',TRAITS_PSY)+'</div></div>'+
+    '<div style="margin-top:4px;font-size:10px;color:#555"><b>Key:</b> A = Excellent | B = Very Good | C = Good | D = Fair | F = Poor</div>';
+}
 async function loadExtras(classId,termId,sessionId){
-  const X={att:null,com:{},next:'',days:null};
+  const X={att:null,com:{},next:'',days:null,tr:{}};
   try{if(window.ngisGenderReady)await window.ngisGenderReady();}catch(e){}
   try{if(window.ngisRegisterTermSummary)X.att=await window.ngisRegisterTermSummary(classId,termId,sessionId);}catch(e){console.warn('Register attendance:',e);}
   try{if(window.ngisSchoolOpenedTerm){const o=await window.ngisSchoolOpenedTerm(termId,sessionId);if(o&&o.ok)X.days=o.days;}}catch(e){console.warn('School days opened:',e);}
@@ -7978,18 +7996,22 @@ async function loadExtras(classId,termId,sessionId){
     const r=await supabaseClient.from('term_report_settings').select('next_term_begins').eq('term_id',String(termId)).eq('session_id',String(sessionId)).maybeSingle();
     if(!r.error&&r.data)X.next=r.data.next_term_begins||'';
   }catch(e){}
+  try{
+    const r=await supabaseClient.from('term_report_traits').select('student_id,ratings').eq('term_id',String(termId)).eq('session_id',String(sessionId)).eq('class_id',String(classId));
+    if(!r.error)(r.data||[]).forEach(x=>{X.tr[String(x.student_id)]=x.ratings||{};});else console.warn('term_report_traits:',r.error.message);
+  }catch(e){}
   RX[rxKey(classId,termId,sessionId)]=X;return X;
 }
 window.ngisTermlyExtras=loadExtras;
 function extrasFor(student,termId,sessionId,classId){
-  const X=RX[rxKey(classId,termId,sessionId)]||{att:null,com:{},next:'',days:null};
+  const X=RX[rxKey(classId,termId,sessionId)]||{att:null,com:{},next:'',days:null,tr:{}};
   const a=X.att&&X.att.ok&&X.att.opened>0?X.att:null;
   const mine=a?(a.by[String(student.id)]||{p:0,a:0}):null;
   const dOpen=(X.days!=null&&Number.isFinite(X.days))?X.days:null,dPres=mine?mine.p/2:null;
   const c=X.com[String(student.id)]||{};
   return{gender:window.ngisGenderLabel?window.ngisGenderLabel(student):'-',
     opened:dOpen!==null?fmtDays(dOpen):'-',present:dPres!==null?fmtDays(dPres):'-',absent:(dOpen!==null&&dPres!==null)?fmtDays(Math.max(0,dOpen-dPres)):'-',
-    tc:c.teacher_comment||'',pc:c.principal_comment||'',next:X.next||''};
+    tc:c.teacher_comment||'',pc:c.principal_comment||'',next:X.next||'',tr:(X.tr||{})[String(student.id)]||{}};
 }
 function buildReport(student,all,termId,sessionId,classId){
   const XT=extrasFor(student,termId,sessionId,classId);
@@ -8015,6 +8037,7 @@ function buildReport(student,all,termId,sessionId,classId){
   '<div style="text-align:center;border-bottom:2px solid #1a5f2a;padding-bottom:10px"><img src="data:image/png;base64,'+LOGO_B64+'" style="width:60px;height:60px;object-fit:contain"><h2 style="margin:4px 0;color:#1a5f2a;font-size:20px">Nigeria-Ghana International School</h2><div style="font-size:12px;color:#666;font-style:italic">"Knowledge &amp; Morality"</div><div style="font-weight:800;margin-top:6px;color:#c41e3a;font-size:14px">TERMLY REPORT CARD</div></div>'+
   '<table style="width:100%;margin:12px 0;font-size:12px"><tr><td><b>Name:</b> '+esc(student.name)+'</td><td><b>Class:</b> '+esc(cls?.name||'')+'</td><td><b>Term:</b> '+esc(term?.name||'')+'</td><td><b>Session:</b> '+esc(sess?.name||'')+'</td></tr><tr><td><b>ID:</b> '+esc(student.student_login_id||'')+'</td><td><b>Class Grade:</b> '+(n?og[0]+' ('+og[1]+')':'-')+'</td><td><b>Total:</b> '+r2(sum)+' / '+(n*100)+'</td><td><b>Average:</b> '+avg+'%</td></tr><tr><td><b>Gender:</b> '+esc(XT.gender)+'</td><td><b>Days School Opened:</b> '+XT.opened+'</td><td><b>Days Present:</b> '+XT.present+'</td><td><b>Days Absent:</b> '+XT.absent+'</td></tr></table>'+
   '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="'+th+';text-align:left">Subject</th><th style="'+th+'">Test 1<br>/'+SC.t1+'</th><th style="'+th+'">Test 2<br>/'+SC.t2+'</th>'+(SC.senior?'':'<th style="'+th+'">Project<br>/10</th>')+'<th style="'+th+'">'+(SC.senior?'Assign./Project':'Assign.')+'<br>/10</th><th style="'+th+'">Exam<br>/'+SC.ex+'</th><th style="'+th+'">Total<br>/100</th><th style="'+th+'">Grade</th><th style="'+th+'">Class<br>Avg</th><th style="'+th+'">Remark</th></tr></thead><tbody>'+(body||'<tr><td colspan="'+(SC.senior?9:10)+'" style="padding:16px;text-align:center;color:#888">No scores recorded.</td></tr>')+'</tbody></table>'+
+  traitsHtml(XT.tr)+
   '<div style="margin-top:12px;padding:10px;background:#f8faf9;border-left:4px solid #1a5f2a;font-size:12px"><b>Remark:</b> '+rem+'</div>'+
   '<div style="margin-top:10px;border:1px solid #c9d3cc;border-radius:4px;padding:8px 10px;font-size:12px;min-height:44px;white-space:pre-wrap"><b>Class Teacher\'s Comment:</b> '+esc(XT.tc)+'</div>'+
   '<div style="margin-top:8px;border:1px solid #c9d3cc;border-radius:4px;padding:8px 10px;font-size:12px;min-height:44px;white-space:pre-wrap"><b>'+headTitle(classId)+'\'s Comment:</b> '+esc(XT.pc)+'</div>'+
@@ -8139,6 +8162,7 @@ function tsCFill(){
 window.tsCLoad=async function(){
   const c=$('tsCClass').value,t=$('tsCTerm').value,se=$('tsCSession').value;
   $('tsCStatus').innerHTML='';$('tsCActions').style.display='none';
+  if($('tsTBox')){$('tsTBox').style.display='none';$('tsTWrap').innerHTML='';$('tsTStatus').innerHTML='';$('tsTActions').style.display='none';}
   if(!t||!se){$('tsCWrap').innerHTML='<div class="empty-state">Choose a term and session.</div>';$('tsCNextDate').value='';$('tsCDaysOpen').value='';return;}
   try{const r=await supabaseClient.from('term_report_settings').select('next_term_begins').eq('term_id',String(t)).eq('session_id',String(se)).maybeSingle();
     $('tsCNextDate').value=(!r.error&&r.data&&r.data.next_term_begins)?String(r.data.next_term_begins).slice(0,10):'';
@@ -8159,6 +8183,33 @@ window.tsCLoad=async function(){
    list.map((s,i)=>{const x=com[String(s.id)]||{},a=hasAtt?(att.by[String(s.id)]||{p:0}):null;
      return '<tr data-sid="'+esc(s.id)+'"><td data-label="#">'+(i+1)+'</td><td data-label="Student" style="text-align:left">'+esc(s.name)+'</td><td data-label="Gender">'+esc(window.ngisGenderLabel?window.ngisGenderLabel(s):'-')+'</td><td data-label="Days Present">'+(a?fmtDays(a.p/2):'-')+'</td><td data-label="Class Teacher\'s Comment">'+ta('tsC-t',s.id,x.teacher_comment,false)+'</td>'+(isAdmin()?'<td data-label="'+headTitle(c)+'\'s Comment">'+ta('tsC-p',s.id,x.principal_comment,false)+'</td>':'')+'</tr>';}).join('')+'</tbody></table>';
   $('tsCActions').style.display='flex';
+  tsTLoad(c,t,se,list);
+};
+async function tsTLoad(c,t,se,list){
+  let tr={};
+  const r=await supabaseClient.from('term_report_traits').select('student_id,ratings').eq('term_id',String(t)).eq('session_id',String(se)).eq('class_id',String(c));
+  if(r.error){$('tsTStatus').innerHTML='<div class="rg-warn bad">'+esc(String(r.error.message||'').match(/term_report_traits|relation|schema cache|does not exist/i)?'Ratings table not found. Run termly_traits_setup.sql once in Supabase > SQL Editor, then refresh this page. ('+r.error.message+')':r.error.message)+'</div>';}
+  else(r.data||[]).forEach(x=>{tr[String(x.student_id)]=x.ratings||{};});
+  const sel=(sid,key,val)=>'<select class="tsT-sel" data-sid="'+esc(sid)+'" data-key="'+key+'" style="width:58px;padding:6px 2px;border:2px solid #e0e0e0;border-radius:8px;font-size:.9rem;text-align:center"><option value=""></option>'+TRAIT_LETTERS.map(l=>'<option value="'+l+'"'+(val===l?' selected':'')+'>'+l+'</option>').join('')+'</select>';
+  const th='style="text-align:center;font-size:.72rem"';
+  $('tsTWrap').innerHTML='<table class="ts-grid"><thead><tr><th rowspan="2">#</th><th rowspan="2" style="text-align:left">Student</th><th colspan="'+TRAITS_AFF.length+'" style="text-align:center;background:#1a5f2a;color:#fff">AFFECTIVE DOMAIN</th><th colspan="'+TRAITS_PSY.length+'" style="text-align:center;background:#0d6efd;color:#fff">PSYCHOMOTOR SKILLS</th></tr><tr>'+
+    TRAITS_AFF.concat(TRAITS_PSY).map(x=>'<th '+th+'>'+x[1]+'</th>').join('')+'</tr></thead><tbody>'+
+    list.map((s,i)=>{const v=tr[String(s.id)]||{};
+      return '<tr data-sid="'+esc(s.id)+'"><td data-label="#">'+(i+1)+'</td><td data-label="Student" style="text-align:left">'+esc(s.name)+'</td>'+
+        TRAITS_AFF.concat(TRAITS_PSY).map(x=>'<td data-label="'+x[1]+'">'+sel(s.id,x[0],v[x[0]])+'</td>').join('')+'</tr>';}).join('')+'</tbody></table>';
+  $('tsTBox').style.display='block';$('tsTActions').style.display='flex';
+}
+window.tsTSave=async function(){
+  const c=$('tsCClass').value,t=$('tsCTerm').value,se=$('tsCSession').value;
+  if(!c||!t||!se){showToast('Select class, term and session','error');return;}
+  if(!cMay(c)){showToast('Only the class teacher can save ratings for this class','error');return;}
+  const rows=[],now=new Date().toISOString();
+  document.querySelectorAll('#tsTWrap tr[data-sid]').forEach(tr=>{
+    const ratings={};tr.querySelectorAll('.tsT-sel').forEach(s=>{if(s.value)ratings[s.dataset.key]=s.value;});
+    rows.push({student_id:String(tr.dataset.sid),class_id:String(c),term_id:String(t),session_id:String(se),ratings,updated_by:currentUser.name||String(currentUser.id),updated_at:now});});
+  if(!rows.length)return;
+  for(const part of chunkArray(rows,200)){const {error}=await supabaseClient.from('term_report_traits').upsert(part,{onConflict:'student_id,term_id,session_id'});if(error){showToast(/term_report_traits|relation|schema cache|does not exist/i.test(error.message||'')?'Ratings table not found. Run termly_traits_setup.sql in Supabase first.':error.message,'error');return;}}
+  showToast('Ratings saved for '+rows.length+' students');
 };
 window.tsCSave=async function(){
   const c=$('tsCClass').value,t=$('tsCTerm').value,se=$('tsCSession').value;
