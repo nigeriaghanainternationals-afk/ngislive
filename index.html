@@ -1125,6 +1125,9 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <div class="nav-item" onclick="showSection('nurseryObservationSection',this)"><i class="fas fa-seedling"></i> Nursery Observation</div>
 <div class="nav-item" onclick="showSection('earlyMidTermSection',this)"><i class="fas fa-file-signature"></i> Early Years Mid-Term</div>
 <div class="nav-item" onclick="showSection('nurseryTermReportSection',this)"><i class="fas fa-star"></i> Nursery Term Report</div>
+<div class="nav-item hidden nursery-hod-nav" onclick="showSection('nurseryRegisterSection',this)"><i class="fas fa-user-plus"></i> Register Learner</div>
+<div class="nav-item hidden nursery-hod-nav" onclick="showSection('nurseryMonitorSection',this)"><i class="fas fa-clipboard-check"></i> Observation Monitor</div>
+<div class="nav-item hidden nursery-hod-nav" onclick="showSection('nurserySubjectsSection',this)"><i class="fas fa-book"></i> Nursery Subjects</div>
 <!-- Class-teacher-only register links: assignment checked when the menu is built and when opened. -->
 <div class="nav-item ngis-class-register" style="display:none" onclick="showSection('regMark',this)"><i class="fas fa-clipboard-list"></i> Class Register</div>
 <div class="nav-item ngis-class-register" style="display:none" onclick="showSection('regTerm',this)"><i class="fas fa-chart-line"></i> Register Summary</div>
@@ -3011,6 +3014,7 @@ function ngisApplyTeacherPartition(){
    const action=el.getAttribute('onclick')||'';
    const match=action.match(/showSection\('([^']+)'/);
    const section=match?.[1];
+   if(el.classList.contains('nursery-hod-nav'))return;
    if(nurseryOnly.has(section))el.style.display=sections.has('nursery')&&hasClass?'flex':'none';
    if(['regMark','regGender','regTerm'].includes(section))el.style.display=hasClass?'flex':'none';
    if(section==='reportCardSection'||section==='tsComments')el.style.display=ngisHasDesignatedClass()?'flex':'none';
@@ -9392,6 +9396,31 @@ const hodDepts=()=>isTeacher()?depts.filter(d=>sameId(d.hod_id,currentUser.id)):
 const memberIdsOf=d=>members.filter(m=>sameId(m.department_id,d.id)).map(m=>S(m.teacher_id));
 const hodMemberIds=()=>[...new Set(hodDepts().flatMap(memberIdsOf))].filter(id=>id!==me());
 const isHod=()=>!deptMissing&&hodDepts().length>0;
+const NHOD_NAME=/nurser|early\s*years|pre-?\s*school|pre-?\s*primary|play\s*group|creche|cr\u00e8che|kindergarten|montessori|foundation|infant|(^|[^a-z])kg([^a-z]|$)/i;
+const NHOD_CLASS=/nursery|playgroup|play group|creche|cr\u00e8che|early years|(^|[^a-z])kg(\s*\d|$)|kindergarten/i;
+window.ngisNurseryHod=()=>{
+  if(!isTeacher()||!isHod())return false;
+  /* an HOD who is assigned to the Nursery section (by class or by staff section) */
+  try{
+    if(typeof ngisTeacherPartitions==='function'&&ngisTeacherPartitions().has('nursery'))return true;
+    const me=teachers.find(t=>sameId(t.id,currentUser.id))||currentUser;
+    if([].concat(me.school_sections||[]).map(x=>String(x).toLowerCase()).includes('nursery'))return true;
+  }catch(e){}
+  return hodDepts().some(d=>{
+    if(NHOD_NAME.test(d.name||''))return true;
+    /* otherwise: every member of the department who has a class teaches only nursery classes */
+    const mids=memberIdsOf(d),cls=[];
+    mids.forEach(tid=>classTeachers.filter(ct=>S(ct.teacher_id)===tid).forEach(ct=>{const c=classes.find(x=>sameId(x.id,ct.class_id));cls.push(c&&NHOD_CLASS.test(c.name||''));}));
+    return cls.length>0&&cls.every(Boolean);
+  });
+};
+let nhodLast=null;
+window.ngisNhodRefresh=()=>{
+  const on=!!(currentUser&&window.ngisNurseryHod());
+  document.querySelectorAll('.nursery-hod-nav').forEach(e=>e.classList.toggle('hidden',!on));
+  if(on!==nhodLast){nhodLast=on;if(on){try{if(typeof populateNurseryControls==='function')populateNurseryControls();if(typeof loadNurseryObservations==='function')loadNurseryObservations();}catch(e){console.warn(e);}}}
+};
+setInterval(()=>{try{window.ngisNhodRefresh();}catch(e){}},2500);
 window.hodClassIds=()=>{if(!isTeacher()||!isHod())return[];const ids=hodMemberIds();return[...new Set(classTeachers.filter(ct=>ids.includes(S(ct.teacher_id))).map(ct=>S(ct.class_id)))];};
 const deptNamesOf=p=>depts.filter(d=>members.some(m=>sameId(m.department_id,d.id)&&sameId(m.teacher_id,p.teacher_id))).map(d=>d.name);
 async function loadDepts(){
@@ -9690,10 +9719,12 @@ async function userWatch(){
   if(uid===lastUid)return;
   lastUid=uid;scope='mine';
   const hn=$('hodNav');if(hn)hn.classList.add('hidden');
+  document.querySelectorAll('.nursery-hod-nav').forEach(e=>e.classList.add('hidden'));nhodLast=null;
   setBadge('.lp-badge',0);setBadge('.hp-badge',0);
   if(!uid||!isTeacher()){if(uid)badge();return;}
   await loadDepts();
   if(hn)hn.classList.toggle('hidden',!isHod());
+  nhodLast=null;window.ngisNhodRefresh();
   badge();
 }
 if(!badgeTimer)badgeTimer=setInterval(()=>{userWatch();if(currentUser)badge();},4000);
@@ -9931,12 +9962,14 @@ let nurseryObservations=[],nurseryNotes=[],nSessions=[],nSubjects=[],nLevelMissi
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cleanText=v=>String(v||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim();
 function isAdmin(){return !!currentUser&&currentUser.role==='admin';}
+/* Admin OR the HOD of the Nursery / Early Years department: full access to every nursery class and feature. */
+function nAdm(){return isAdmin()||(!!currentUser&&currentUser.role==='teacher'&&typeof window.ngisNurseryHod==='function'&&!!window.ngisNurseryHod());}
 function myClassIds(){return currentUser?classTeachers.filter(ct=>String(ct.teacher_id)===String(currentUser.id)).map(ct=>String(ct.class_id)):[];}
 function isNurseryClass(cls){
   if(!cls||!cls.name) return false;
   return /nursery|playgroup|play group|creche|crèche|early years|(^|[^a-z])kg(\s*\d|$)|kindergarten/i.test(cls.name);
 }
-function myNurseryClasses(){const n=classes.filter(isNurseryClass);return isAdmin()?n:n.filter(c=>myClassIds().includes(String(c.id)));}
+function myNurseryClasses(){const n=classes.filter(isNurseryClass);return nAdm()?n:n.filter(c=>myClassIds().includes(String(c.id)));}
 function nurserySubjects(){return nSubjects;}
 function nReloadStudents(){return typeof window.loadStudents==='function'?window.loadStudents():null;}
 
@@ -9984,7 +10017,7 @@ function nSyncSubjects(){
 async function loadNurseryObservations(){
   let q=supabaseClient.from('nursery_observations').select('*').order('created_at',{ascending:false});
   let nq=supabaseClient.from('nursery_week_notes').select('*');
-  if(!isAdmin()){
+  if(!nAdm()){
     const ids=myNurseryClasses().map(c=>c.id);
     if(ids.length===0){nurseryObservations=[];nurseryNotes=[];renderNurseryObservationsTable();
       // Only warn when the teacher is actually on a Nursery page; non-Nursery teachers shouldn't see this on login/dashboard.
@@ -10002,12 +10035,12 @@ async function loadNurseryObservations(){
   nurseryObservations=list;
   renderNurseryObservationsTable();
   const _mon=document.getElementById('nurseryMonitorSection');
-  if(isAdmin()&&_mon&&!_mon.classList.contains('hidden')&&typeof renderObsMonitor==='function')renderObsMonitor();
+  if(nAdm()&&_mon&&!_mon.classList.contains('hidden')&&typeof renderObsMonitor==='function')renderObsMonitor();
 }
 
 /* ----- nursery subject management ----- */
 const NURSERY_STANDARD=['Practical Life','Sensorial','Mathematics','English Language','Cultural Education','Social Grace & Courtesy'];
-function nCanManageSubjects(){return !!currentUser&&(isAdmin()||myNurseryClasses().length>0);}
+function nCanManageSubjects(){return !!currentUser&&(nAdm()||myNurseryClasses().length>0);}
 function renderNurserySubjectsAdmin(){
   const tb=document.getElementById('nurserySubjectsTable'); if(!tb)return;
   const note=document.getElementById('nurserySubjectsNote');
@@ -10036,7 +10069,7 @@ async function nurseryAddSubject(){
   if(typeof window.loadSubjects==='function')await window.loadSubjects();
 }
 async function nurseryAddStandardSubjects(){
-  if(!isAdmin())return;
+  if(!nAdm())return;
   let added=0,fail=null;
   for(const n of NURSERY_STANDARD){const r=await nInsertSubject(n); if(r.error){fail=r.error;break;} if(!r.skipped)added++;}
   if(fail)showToast('Error: '+fail.message+(/level/i.test(fail.message)?' (run nursery_setup.sql first)':''),'error');
@@ -10044,7 +10077,7 @@ async function nurseryAddStandardSubjects(){
   if(typeof window.loadSubjects==='function')await window.loadSubjects();
 }
 async function nurseryDeleteSubject(id){
-  if(!isAdmin())return;
+  if(!nAdm())return;
   const s=nSubjects.find(x=>String(x.id)===String(id)); if(!s)return;
   if(!confirm('Delete nursery subject "'+s.name+'"?\n\nAll nursery observations recorded under it will be deleted too.'))return;
   const{error}=await supabaseClient.from('subjects').delete().eq('id',id);
@@ -10146,7 +10179,7 @@ async function deleteAllNurseryData(){
   const studentId=document.getElementById('nurseryStudentSelect').value;
   const weekId=document.getElementById('nurseryWeekSelect').value;
   const myIds=myNurseryClasses().map(c=>c.id);
-  if(!isAdmin()&&myIds.length===0){showToast('No nursery class assigned to you','error');return;}
+  if(!nAdm()&&myIds.length===0){showToast('No nursery class assigned to you','error');return;}
   let confirmMsg,filter={};
   if(classId||studentId||weekId){
     confirmMsg='Delete data for the selected filters?\n\n';
@@ -10155,7 +10188,7 @@ async function deleteAllNurseryData(){
     if(weekId){confirmMsg+='Week: '+(weeks.find(w=>w.id===weekId)?.name||weekId)+'\n';filter.week_id=weekId;}
     confirmMsg+='\nThis action cannot be undone!';
   }else{
-    confirmMsg=isAdmin()
+    confirmMsg=nAdm()
       ?'You have not selected any filters. This will delete ALL nursery observation records in the system.\n\nAre you sure?'
       :'You have not selected any filters. This will delete ALL nursery observation records for your class(es).\n\nAre you sure?';
   }
@@ -10164,8 +10197,8 @@ async function deleteAllNurseryData(){
   if(filter.class_id)query=query.eq('class_id',filter.class_id);
   if(filter.student_id)query=query.eq('student_id',filter.student_id);
   if(filter.week_id)query=query.eq('week_id',filter.week_id);
-  if(!isAdmin())query=query.in('class_id',myIds);
-  if(!filter.class_id&&!filter.student_id&&!filter.week_id&&isAdmin())query=query.not('id','is',null);
+  if(!nAdm())query=query.in('class_id',myIds);
+  if(!filter.class_id&&!filter.student_id&&!filter.week_id&&nAdm())query=query.not('id','is',null);
   const{error}=await query;
   if(error){showToast('Error deleting data: '+error.message,'error');return;}
   showToast('Nursery observation data deleted successfully');
@@ -11023,7 +11056,7 @@ function emtLoadSheet(){
 }
 async function emtLoad(){
   let q=supabaseClient.from('early_midterm_reports').select('*').order('updated_at',{ascending:false});
-  if(!isAdmin()){
+  if(!nAdm()){
     const ids=myNurseryClasses().map(c=>c.id);
     if(!ids.length){emtReports=[];emtRenderTable();emtUpdateZipInfo();showToast('No Early Years class assigned to this teacher. Ask the admin to assign the class.','error');return;}
     q=q.in('class_id',ids);
@@ -11882,7 +11915,7 @@ function nWeekSelect(){
   if(cur)el.value=cur;
 }
 nHook('showSection',o=>function(id,navEl){
-  if(N_ADMIN_ONLY.includes(id)&&currentUser&&!isAdmin()){showToast('This feature is available to administrators only.','error');return;}
+  if(N_ADMIN_ONLY.includes(id)&&currentUser&&!nAdm()){showToast('This feature is available to administrators only.','error');return;}
   const r=o.apply(this,arguments);
   if(N_TITLES[id]){
     const t=document.getElementById('pageTitle'); if(t)t.innerHTML=N_TITLES[id];
@@ -11890,7 +11923,7 @@ nHook('showSection',o=>function(id,navEl){
     if(id==='nurseryRegisterSection'){populateNurseryControls();}
     if(id==='earlyMidTermSection'){emtPopulate();emtLoad();}
     if(id==='nurseryTermReportSection'){ntrPopulate();ntrLoad();}
-    if(id==='nurseryMonitorSection'&&isAdmin()){openObsMonitor();}
+    if(id==='nurseryMonitorSection'&&nAdm()){openObsMonitor();}
     if(id==='nurserySubjectsSection'){renderNurserySubjectsAdmin();}
   }
   return r;
