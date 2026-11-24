@@ -1270,12 +1270,14 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 .ntr-tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-bottom:14px}
 .ntr-tcard{border:2px solid #ccc;border-radius:14px;overflow:hidden;background:#fff}
 .ntr-tcard label{display:block;color:#fff;font-weight:800;padding:8px 12px;font-size:.92rem;text-shadow:0 1px 0 rgba(0,0,0,.18)}
-.ntr-tcard textarea{display:block;width:100%;border:0;outline:0;resize:vertical;padding:10px 12px;font-size:.9rem;line-height:1.5;min-height:104px;font-family:inherit;background:#fff}
+.ntr-tcard textarea{display:block;width:100%;border:0;outline:0;resize:vertical;overflow-y:hidden;padding:10px 12px;font-size:.9rem;line-height:1.5;min-height:104px;font-family:inherit;background:#fff}
 .ntr-empty{background:#f4f8fc;border:2px dashed #b9cbe0;border-radius:12px;padding:18px;text-align:center;color:#456;font-size:.9rem;margin-bottom:14px}
 .ntr-gt th{color:#fff;font-size:.8rem;padding:8px 6px;text-shadow:0 1px 0 rgba(0,0,0,.18)}
 .ntr-gt th:first-child{text-align:left;font-size:.92rem}
 .ntr-over td{background:#f4f8fc}
 .ntr-gt .ntr-tick{width:24px;height:24px;min-height:0;margin:0}
+.ntr-gt{min-width:560px}
+.ntr-gt td:first-child{min-width:180px;word-break:normal;overflow-wrap:break-word;line-height:1.45}
 .ntr-count{font-size:.85rem;color:#456;margin:0 0 12px}
 </style>
       <div class="card no-print">
@@ -4322,14 +4324,11 @@ const week=weeks.find(w=>w.id===weekId);
 const term=week?.term_id?terms.find(t=>t.id===week.term_id):null;
 const session=week?.session_id?sessions.find(s=>s.id===week.session_id):(term?.session_id?sessions.find(s=>s.id===term.session_id):null);
 const cls=classes.find(c=>c.id===student?.class_id);
-const [assessResult,commentResult,SEC]=await Promise.all([
-  supabaseClient.from('assessments').select('*,subjects(name)').eq('student_id',studentId).eq('week_id',weekId),
-  supabaseClient.from('weekly_comments').select('*').eq('student_id',studentId).eq('week_id',weekId).maybeSingle(),
-  ngisSecWeekly(student,weekId)
-]);
-const assess=assessResult.data||[];
-const commentData=commentResult.data;
+const{data:assessData}=await supabaseClient.from('assessments').select('*,subjects(name)').eq('student_id',studentId).eq('week_id',weekId);
+const assess=assessData||[];
+const{data:commentData}=await supabaseClient.from('weekly_comments').select('*').eq('student_id',studentId).eq('week_id',weekId).maybeSingle();
 const comment=await ngisResolveWeeklyComment(student,weekId,assess,commentData?.comment);
+const SEC=await ngisSecWeekly(student,weekId);
 const ct=getClassTeacherRecord(student?.class_id);
 const ctTeacher=teachers.find(t=>String(t.id)===String(ct?.teacher_id));
 let totalScore=0,totalPossible=0;
@@ -4344,8 +4343,7 @@ const overallPercent=totalPossible>0?((totalScore/totalPossible)*100).toFixed(1)
 const overallGrade=getGrade((totalScore/(assess.length||1)));
 const html='<div class="report-card animate-fade"><div class="report-header"><img src="data:image/png;base64,'+LOGO_B64+'" alt="Logo"><h2>Nigeria-Ghana International School</h2><p>&quot;Knowledge &amp; Morality&quot;</p><p style="margin-top:8px;font-size:0.8rem;color:#888;font-style:normal;">Weekly Assessment Report Card</p></div><div class="report-meta rm4"><div class="report-meta-item"><h5>Student Name</h5><p>'+(student?.name||'-')+'</p></div><div class="report-meta-item"><h5>Gender</h5><p>'+ngisGenderLabel(student)+'</p></div><div class="report-meta-item"><h5>Class</h5><p>'+(cls?.name||'-')+'</p></div><div class="report-meta-item"><h5>Week</h5><p>'+(week?.name||'-')+'</p></div></div><div class="report-meta" style="margin-top:10px;background:#e8f5e9;"><div class="report-meta-item"><h5>Term</h5><p>'+(term?.name||'-')+'</p></div><div class="report-meta-item"><h5>Session</h5><p>'+(session?.name||'-')+'</p></div><div class="report-meta-item"><h5>Date</h5><p>'+new Date().toLocaleDateString()+'</p></div></div><div class="table-container"><table class="report-table"><thead><tr><th>Subject</th><th>Class Work /10</th><th>Test /10</th><th>Total /20</th><th>Grade</th><th>Remark</th>'+SEC.th+'</tr></thead><tbody>'+(rows||'<tr><td colspan="'+(SEC.sec?7:6)+'" style="text-align:center;padding:30px;">No assessments recorded for this week</td></tr>')+'</tbody></table></div><div style="margin-top:20px;background:linear-gradient(135deg,#f8f9fa,#e9ecef);padding:20px;border-radius:12px;text-align:center;"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;"><div><div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:1px;">Total Score</div><div style="font-size:1.5rem;font-weight:800;color:var(--primary);">'+totalScore.toFixed(1)+' / '+totalPossible+'</div></div><div><div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:1px;">Percentage</div><div style="font-size:1.5rem;font-weight:800;color:var(--primary);">'+overallPercent+'%</div></div><div><div style="font-size:0.75rem;color:#888;text-transform:uppercase;letter-spacing:1px;">Overall Grade</div><div style="font-size:1.5rem;font-weight:800;color:var(--secondary);">'+(assess.length>0?overallGrade.grade:'-')+'</div></div></div></div><div class="report-summary"><div class="report-comment"><h4><i class="fas fa-comment"></i> '+SEC.title+'</h4><p>&quot;'+comment+'&quot;</p></div>'+(SEC.sec?'':'<div class="report-comment" style="border-left-color:var(--secondary);"><h4><i class="fas fa-chart-line"></i> Performance Summary</h4><p>'+(assess.length>0?overallGrade.remark+' performance this week. Keep up the good work!':'No data available for this week.')+'</p></div>')+'</div><div class="report-signature"><div class="signature-line"><div class="line"></div><p><strong>Class Teacher</strong><br>'+(ctTeacher?.name||'Not Assigned')+'</p></div><div class="signature-line"><div class="line"></div><p><strong>Date</strong><br>'+new Date().toLocaleDateString()+'</p></div></div><div style="text-align:center;margin-top:30px;font-size:0.75rem;color:#aaa;"><i class="fas fa-shield-alt"></i> Powered by NGIS Assessment System | Supabase Cloud</div></div>';
 document.getElementById('reportCardDisplay').innerHTML=html;
-// Do not hold the report-card display open while the optional comment editor loads.
-loadReportCardTeacherCommentEditor(studentId,weekId,student?.class_id).catch(e=>console.warn('Comment editor load:',e));
+await loadReportCardTeacherCommentEditor(studentId,weekId,student?.class_id);
 }
 
 async function loadReportCardTeacherCommentEditor(studentId,weekId,classId){
@@ -4704,14 +4702,11 @@ const week=weeks.find(w=>w.id===weekId);
 const term=week?.term_id?terms.find(t=>t.id===week.term_id):null;
 const session=week?.session_id?sessions.find(s=>s.id===week.session_id):(term?.session_id?sessions.find(s=>s.id===term.session_id):null);
 const cls=classes.find(c=>c.id===student?.class_id);
-const [assessResult,commentResult,SEC]=await Promise.all([
-  supabaseClient.from('assessments').select('*,subjects(name)').eq('student_id',studentId).eq('week_id',weekId),
-  supabaseClient.from('weekly_comments').select('*').eq('student_id',studentId).eq('week_id',weekId).maybeSingle(),
-  ngisSecWeekly(student,weekId)
-]);
-const assess=assessResult.data||[];
-const commentData=commentResult.data;
+const{data:assessData}=await supabaseClient.from('assessments').select('*,subjects(name)').eq('student_id',studentId).eq('week_id',weekId);
+const assess=assessData||[];
+const{data:commentData}=await supabaseClient.from('weekly_comments').select('*').eq('student_id',studentId).eq('week_id',weekId).single();
 const comment=await ngisResolveWeeklyComment(student,weekId,assess,commentData?.comment);
+const SEC=await ngisSecWeekly(student,weekId);
 const ct=getClassTeacherRecord(student?.class_id);
 const ctTeacher=teachers.find(t=>String(t.id)===String(ct?.teacher_id));
 let totalScore=0,totalPossible=0;
@@ -4752,14 +4747,11 @@ const week=weeks.find(w=>w.id===weekId);
 const term=week?.term_id?terms.find(t=>t.id===week.term_id):null;
 const session=week?.session_id?sessions.find(s=>s.id===week.session_id):(term?.session_id?sessions.find(s=>s.id===term.session_id):null);
 const cls=classes.find(c=>c.id===student?.class_id);
-const [assessResult,commentResult,SEC]=await Promise.all([
-  supabaseClient.from('assessments').select('*,subjects(name)').eq('student_id',studentId).eq('week_id',weekId),
-  supabaseClient.from('weekly_comments').select('*').eq('student_id',studentId).eq('week_id',weekId).maybeSingle(),
-  ngisSecWeekly(student,weekId)
-]);
-const assess=assessResult.data||[];
-const commentData=commentResult.data;
+const{data:assessData}=await supabaseClient.from('assessments').select('*,subjects(name)').eq('student_id',studentId).eq('week_id',weekId);
+const assess=assessData||[];
+const{data:commentData}=await supabaseClient.from('weekly_comments').select('*').eq('student_id',studentId).eq('week_id',weekId).single();
 const comment=await ngisResolveWeeklyComment(student,weekId,assess,commentData?.comment);
+const SEC=await ngisSecWeekly(student,weekId);
 const ct=getClassTeacherRecord(student?.class_id);
 const ctTeacher=teachers.find(t=>String(t.id)===String(ct?.teacher_id));
 let totalScore=0,totalPossible=0;
@@ -5140,7 +5132,7 @@ function midTermReportHtml(student,record,term,session,ctTeacher,remark){
  return '<div class="midterm-report-card"><div class="report-header"><img src="data:image/png;base64,'+LOGO_B64+'" alt="Logo"><h2>Nigeria-Ghana International School</h2><p>&quot;Knowledge &amp; Morality&quot;</p><p class="midterm-title" style="margin-top:8px;font-size:1rem">MID-TERM ASSESSMENT REPORT CARD</p></div><div class="report-meta rm4"><div class="report-meta-item"><h5>Student Name</h5><p>'+escapeHtml(student?.name||'-')+'</p></div><div class="report-meta-item"><h5>Gender</h5><p>'+ngisGenderLabel(student)+'</p></div><div class="report-meta-item"><h5>Class / Arm</h5><p>'+escapeHtml(cls?.name||'-')+'</p></div><div class="report-meta-item"><h5>Term</h5><p>'+escapeHtml(term?.name||'-')+'</p></div></div><div class="report-meta" style="margin-top:10px;background:#e8f5e9"><div class="report-meta-item"><h5>Session</h5><p>'+escapeHtml(session?.name||'-')+'</p></div><div class="report-meta-item"><h5>Assessment</h5><p>Mid-Term</p></div><div class="report-meta-item"><h5>Date Updated</h5><p>'+escapeHtml(date)+'</p></div></div><div class="table-container" style="margin-top:18px"><table class="report-table"><thead><tr><th>Assessment</th><th>Score</th><th>Grade</th><th>Remark</th></tr></thead><tbody><tr><td><strong>Major Test</strong></td><td><strong>'+(score??'-')+' / 20</strong></td><td><span class="grade-badge '+g.cls+'">'+g.grade+'</span></td><td>'+escapeHtml(g.remark)+'</td></tr></tbody></table></div><div class="report-summary">'+midTermRemarkBlockHtml(remark,comment)+'</div><div class="report-signature"><div class="signature-line"><div class="line">'+escapeHtml(ctTeacher?.name||'____________________')+'</div><p><strong>Class Teacher</strong><br>'+escapeHtml(ctTeacher?.name||'Not Assigned')+'</p></div><div class="signature-line"><div class="line">'+escapeHtml(date)+'</div><p><strong>Date</strong><br>'+escapeHtml(date)+'</p></div></div><div class="grading-scale-info"><h4><i class="fas fa-info-circle"></i> Grading Scale</h4><div class="grading-scale-grid"><div class="grading-scale-item"><span>A+</span><span>95-100%</span></div><div class="grading-scale-item"><span>A</span><span>85-95%</span></div><div class="grading-scale-item"><span>B+</span><span>80-85%</span></div><div class="grading-scale-item"><span>B</span><span>70-80%</span></div><div class="grading-scale-item"><span>C</span><span>60-70%</span></div><div class="grading-scale-item"><span>D</span><span>50-60%</span></div><div class="grading-scale-item"><span>E</span><span>45-50%</span></div><div class="grading-scale-item"><span>F</span><span>Below 45%</span></div></div></div><div style="text-align:center;margin-top:18px;font-size:.65rem;color:#aaa"><i class="fas fa-shield-alt"></i> Powered by NGIS Assessment System | Supabase Cloud</div></div>';
 }
 async function fetchMidTermRecord(studentId,termId,sessionId,subjectId){if(window.ngisGenderReady)await window.ngisGenderReady();let q=supabaseClient.from('midterm_assessments').select('*').eq('student_id',studentId).eq('term_id',termId).eq('session_id',sessionId);if(subjectId)q=q.eq('subject_id',subjectId);const {data,error}=await q.limit(1);if(error)throw error;return data?.[0]||null;}
-async function generateMidTermTeacherReport(){const sid=document.getElementById('midTermTeacherReportStudent').value,subjectId=document.getElementById('midTermTeacherReportSubject').value,tid=document.getElementById('midTermTeacherReportTerm').value,sidn=document.getElementById('midTermTeacherReportSession').value;if(!sid||!subjectId||!tid||!sidn){showToast('Select Student, Subject, Term and Session','error');return;}const ids=await getCurrentTeacherSubjectIds();if(!ids.includes(subjectId)){showToast('You are not assigned to this subject.','error');return;}const st=students.find(s=>sameId(s.id,sid));const ct=getClassTeacherRecord(st?.class_id),ctt=teachers.find(t=>String(t.id)===String(ct?.teacher_id));try{const [r,rm]=await Promise.all([fetchMidTermRecord(sid,tid,sidn,subjectId),fetchMidTermRemark(sid,tid,sidn)]);document.getElementById('midTermTeacherReportDisplay').innerHTML=midTermReportHtml(st,r,terms.find(t=>sameId(t.id,tid)),sessions.find(x=>sameId(x.id,sidn)),ctt,rm);}catch(e){showToast('Error loading report: '+e.message,'error');}}
+async function generateMidTermTeacherReport(){const sid=document.getElementById('midTermTeacherReportStudent').value,subjectId=document.getElementById('midTermTeacherReportSubject').value,tid=document.getElementById('midTermTeacherReportTerm').value,sidn=document.getElementById('midTermTeacherReportSession').value;if(!sid||!subjectId||!tid||!sidn){showToast('Select Student, Subject, Term and Session','error');return;}const ids=await getCurrentTeacherSubjectIds();if(!ids.includes(subjectId)){showToast('You are not assigned to this subject.','error');return;}const st=students.find(s=>sameId(s.id,sid));const ct=getClassTeacherRecord(st?.class_id),ctt=teachers.find(t=>String(t.id)===String(ct?.teacher_id));try{const r=await fetchMidTermRecord(sid,tid,sidn,subjectId);const rm=await fetchMidTermRemark(sid,tid,sidn);document.getElementById('midTermTeacherReportDisplay').innerHTML=midTermReportHtml(st,r,terms.find(t=>sameId(t.id,tid)),sessions.find(x=>sameId(x.id,sidn)),ctt,rm);}catch(e){showToast('Error loading report: '+e.message,'error');}}
 async function fetchMidTermRecords(studentId,termId,sessionId){
 if(window.ngisGenderReady)await window.ngisGenderReady();
  const {data,error}=await supabaseClient.from('midterm_assessments').select('*,subjects(name),teachers(name)').eq('student_id',studentId).eq('term_id',termId).eq('session_id',sessionId).order('id');
@@ -5161,7 +5153,7 @@ async function generateMidTermAdminReport(){
  const sid=document.getElementById('midTermAdminReportStudent').value,tid=document.getElementById('midTermAdminReportTerm').value,sidn=document.getElementById('midTermAdminReportSession').value;
  if(!sid||!tid||!sidn){showToast('Select Student, Term and Session','error');return;}
  const st=students.find(s=>String(s.id)===String(sid)),ct=getClassTeacherRecord(st?.class_id),ctt=teachers.find(t=>String(t.id)===String(ct?.teacher_id));
- try{const [r,rm]=await Promise.all([fetchMidTermRecords(sid,tid,sidn),fetchMidTermRemark(sid,tid,sidn)]);document.getElementById('midTermAdminReportDisplay').innerHTML=midTermMultiReportHtml(st,r,terms.find(t=>String(t.id)===String(tid)),sessions.find(x=>String(x.id)===String(sidn)),ctt,rm);}
+ try{const r=await fetchMidTermRecords(sid,tid,sidn);const rm=await fetchMidTermRemark(sid,tid,sidn);document.getElementById('midTermAdminReportDisplay').innerHTML=midTermMultiReportHtml(st,r,terms.find(t=>String(t.id)===String(tid)),sessions.find(x=>String(x.id)===String(sidn)),ctt,rm);}
  catch(e){showToast('Error loading report: '+e.message,'error');}
 }
 function setupMidTermStudentPortal(){fillMidTermTermSelect('midTermStudentTerm');fillMidTermSessionSelect('midTermStudentSession');}
@@ -11354,7 +11346,7 @@ const NTR_AREAS=[
   {k:'social',n:'Social Grace & Courtesy',i:'\uD83E\uDD1D',c:'#D9547E',ph:'Greeting politely\nSaying please and thank you\nTaking turns'}
 ];
 const NTR_LC=['#FF9F43','#FFD43B','#8BD450','#2EB872'];      // colour of each level (same order as NURSERY_LEVELS)
-const NTR_MAX_TOPICS=10,NTR_MAX_LEN=60;
+const NTR_MAX_TOPICS=10,NTR_MAX_LEN=600;
 let ntrTopicRows=[],ntrReports=[],ntrBusy=false;
 const ntrEl=id=>document.getElementById(id);
 const ntrKey=v=>String(v==null?'':v);
@@ -11641,11 +11633,13 @@ function ntrCleanTopics(txt){
   });
   return out;
 }
+function ntrAutoGrow(el){el.style.height='auto';el.style.height=(el.scrollHeight+2)+'px';}
 function ntrRenderTopicsForm(){
   const host=ntrEl('ntrTopicsForm');if(!host)return;
   const{classId,sessionId}=ntrSel(),row=classId&&sessionId?ntrTopicRow(classId,sessionId):null,tp=(row&&row.topics)||{};
   host.innerHTML=NTR_AREAS.map(a=>'<div class="ntr-tcard" style="border-color:'+a.c+'"><label for="ntrTa_'+a.k+'" style="background:'+a.c+'"><span>'+a.i+'</span> '+esc(a.n)+'</label>'+
-    '<textarea id="ntrTa_'+a.k+'" rows="4" maxlength="900" oninput="ntrCountTopics()" placeholder="'+esc('One topic per line, e.g.\n'+a.ph)+'">'+esc((tp[a.k]||[]).join('\n'))+'</textarea></div>').join('');
+    '<textarea id="ntrTa_'+a.k+'" rows="4" maxlength="4000" oninput="ntrCountTopics();ntrAutoGrow(this)" placeholder="'+esc('One topic per line, e.g.\n'+a.ph)+'">'+esc((tp[a.k]||[]).join('\n'))+'</textarea></div>').join('');
+  host.querySelectorAll('textarea').forEach(ntrAutoGrow);
   ntrEl('ntrDaysOpen').value=row&&row.days_open!=null?row.days_open:'';
   ntrEl('ntrNextTerm').value=row&&row.next_term_begins?String(row.next_term_begins).slice(0,10):'';
   ntrCountTopics();
@@ -11666,6 +11660,7 @@ function ntrCopyTopics(){
   const{classId}=ntrSel(),from=ntrEl('ntrCopyFrom').value;
   const r=from&&ntrTopicRow(classId,ntrKey(from)); if(!r){showToast('Choose an earlier term to copy from','error');return;}
   NTR_AREAS.forEach(a=>{ntrEl('ntrTa_'+a.k).value=((r.topics||{})[a.k]||[]).join('\n');});
+  document.querySelectorAll('#ntrTopicsForm textarea').forEach(ntrAutoGrow);
   ntrCountTopics();showToast('Topics copied. Edit them, then press Save Topics.','info');
 }
 function ntrCanEdit(classId){return !!classId&&myNurseryClasses().some(c=>ntrKey(c.id)===classId);}
