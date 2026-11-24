@@ -7926,6 +7926,7 @@ function subjectOkForClass(classId,subjectId){
 }
 window.ngisSubjectOkForClass=subjectOkForClass;
 async function classData(classId,termId,sessionId){
+  const extrasP=loadExtras(classId,termId,sessionId).catch(e=>console.warn('Report card extras:',e));
   let all=[],from=0;
   for(;;){
     const {data,error}=await supabaseClient.from('term_scores').select('*').eq('class_id',classId).eq('term_id',termId).eq('session_id',sessionId).order('id').range(from,from+999);
@@ -7941,7 +7942,7 @@ async function classData(classId,termId,sessionId){
   const subExists=sid=>!!(subjects||[]).find(x=>sameId(x.id,sid));
   all=all.filter(r=>subjectOkForClass(classId,r.subject_id)||(hasReal(r)&&subExists(r.subject_id)));
   try{all=await addMidTermScores(all,classId,termId,sessionId,secOk,twinOk);}catch(e){console.warn('Mid-term merge for report card:',e);}
-  try{await loadExtras(classId,termId,sessionId);}catch(e){console.warn('Report card extras:',e);}
+  await extrasP;
   return all;
 }
 /* The termly card used to show only subjects that already had a term_scores row. Mid-term scores that were saved
@@ -7984,22 +7985,25 @@ function traitsHtml(r){
 }
 async function loadExtras(classId,termId,sessionId){
   const X={att:null,com:{},next:'',days:null,tr:{}};
-  try{if(window.ngisGenderReady)await window.ngisGenderReady();}catch(e){}
-  try{if(window.ngisRegisterTermSummary)X.att=await window.ngisRegisterTermSummary(classId,termId,sessionId);}catch(e){console.warn('Register attendance:',e);}
-  try{if(window.ngisSchoolOpenedTerm){const o=await window.ngisSchoolOpenedTerm(termId,sessionId);if(o&&o.ok)X.days=o.days;}}catch(e){console.warn('School days opened:',e);}
-  try{
-    const ids=students.filter(x=>sameId(x.class_id,classId)).map(x=>String(x.id));
-    const r=await supabaseClient.from('term_report_comments').select('student_id,teacher_comment,principal_comment').eq('term_id',String(termId)).eq('session_id',String(sessionId)).eq('class_id',String(classId));
-    if(!r.error)(r.data||[]).forEach(x=>{X.com[String(x.student_id)]=x;});else console.warn('term_report_comments:',r.error.message);
-  }catch(e){}
-  try{
-    const r=await supabaseClient.from('term_report_settings').select('next_term_begins').eq('term_id',String(termId)).eq('session_id',String(sessionId)).maybeSingle();
-    if(!r.error&&r.data)X.next=r.data.next_term_begins||'';
-  }catch(e){}
-  try{
-    const r=await supabaseClient.from('term_report_traits').select('student_id,ratings').eq('term_id',String(termId)).eq('session_id',String(sessionId)).eq('class_id',String(classId));
-    if(!r.error)(r.data||[]).forEach(x=>{X.tr[String(x.student_id)]=x.ratings||{};});else console.warn('term_report_traits:',r.error.message);
-  }catch(e){}
+  const cid=String(classId),tid=String(termId),sid=String(sessionId);
+  /* every lookup is independent, so run them together instead of one after another */
+  await Promise.all([
+    (async()=>{try{if(window.ngisGenderReady)await window.ngisGenderReady();}catch(e){}})(),
+    (async()=>{try{if(window.ngisRegisterTermSummary)X.att=await window.ngisRegisterTermSummary(classId,termId,sessionId);}catch(e){console.warn('Register attendance:',e);}})(),
+    (async()=>{try{if(window.ngisSchoolOpenedTerm){const o=await window.ngisSchoolOpenedTerm(termId,sessionId);if(o&&o.ok)X.days=o.days;}}catch(e){console.warn('School days opened:',e);}})(),
+    (async()=>{try{
+      const r=await supabaseClient.from('term_report_comments').select('student_id,teacher_comment,principal_comment').eq('term_id',tid).eq('session_id',sid).eq('class_id',cid);
+      if(!r.error)(r.data||[]).forEach(x=>{X.com[String(x.student_id)]=x;});else console.warn('term_report_comments:',r.error.message);
+    }catch(e){}})(),
+    (async()=>{try{
+      const r=await supabaseClient.from('term_report_settings').select('next_term_begins').eq('term_id',tid).eq('session_id',sid).maybeSingle();
+      if(!r.error&&r.data)X.next=r.data.next_term_begins||'';
+    }catch(e){}})(),
+    (async()=>{try{
+      const r=await supabaseClient.from('term_report_traits').select('student_id,ratings').eq('term_id',tid).eq('session_id',sid).eq('class_id',cid);
+      if(!r.error)(r.data||[]).forEach(x=>{X.tr[String(x.student_id)]=x.ratings||{};});else console.warn('term_report_traits:',r.error.message);
+    }catch(e){}})()
+  ]);
   RX[rxKey(classId,termId,sessionId)]=X;return X;
 }
 window.ngisTermlyExtras=loadExtras;
@@ -8047,16 +8051,24 @@ function buildReport(student,all,termId,sessionId,classId){
 }
 async function toCanvas(html){
   const h=document.createElement('div');h.style.cssText='position:fixed;left:-10000px;top:0;width:794px;background:#fff';h.innerHTML=html;document.body.appendChild(h);
-  try{return await html2canvas(h,{scale:2,backgroundColor:'#fff'});}finally{h.remove();}
+  try{return await html2canvas(h,{scale:1.6,backgroundColor:'#fff',logging:false});}finally{h.remove();}
 }
 function addPage(pdf,cv,first){
   if(!first)pdf.addPage();let w=210,h=cv.height*w/cv.width;if(h>297){w=w*297/h;h=297;}
-  pdf.addImage(cv.toDataURL('image/jpeg',0.92),'JPEG',(210-w)/2,0,w,h);
+  pdf.addImage(cv.toDataURL('image/jpeg',0.85),'JPEG',(210-w)/2,0,w,h,undefined,'FAST');
 }
 async function makePdf(items,filename){
-  const {jsPDF}=window.jspdf;const pdf=new jsPDF('p','mm','a4');let i=0;
-  for(const html of items){addPage(pdf,await toCanvas(html),i===0);i++;}
-  pdf.save(filename);
+  const {jsPDF}=window.jspdf;const pdf=new jsPDF('p','mm','a4',true);let i=0;
+  const bar=document.createElement('div');bar.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1a5f2a;color:#fff;padding:10px 18px;border-radius:8px;z-index:99999;font-size:.9rem;box-shadow:0 4px 14px rgba(0,0,0,.3)';
+  if(items.length>1)document.body.appendChild(bar);
+  try{
+    for(const html of items){
+      bar.textContent='Building report card '+(i+1)+' of '+items.length+'…';
+      addPage(pdf,await toCanvas(html),i===0);i++;
+      await new Promise(r=>setTimeout(r,0));
+    }
+    pdf.save(filename);
+  }finally{bar.remove();}
 }
 const safe=s=>String(s||'report').replace(/[^a-z0-9]+/gi,'_');
 
