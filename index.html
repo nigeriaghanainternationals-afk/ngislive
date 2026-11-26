@@ -1456,8 +1456,10 @@ body.ngis-section-mode #adminLoginTab,body.ngis-section-mode #managementLoginTab
 <button class="btn btn-success btn-sm" onclick="regExcel('regGrid','Weekly_Register')"><i class="fas fa-file-excel"></i> Excel</button>
 <button class="btn btn-sm" style="background:#eee" onclick="regRefresh()"><i class="fas fa-sync"></i> Refresh</button>
 <button class="btn btn-sm btn-accent" onclick="showSection('regGender',null)"><i class="fas fa-venus-mars"></i> Set Genders</button>
+<button class="btn btn-sm" style="background:#fff4d6;color:#8a5a00;border:1px solid #f0d48a" onclick="regHolToggle()"><i class="fas fa-umbrella-beach"></i> Holidays &amp; Breaks</button>
 </div>
-<div class="rg-legend"><span><b style="background:#27ae60">P</b>Present</span><span><b style="background:#e74c3c">A</b>Absent</span><span><b style="background:#f39c12">L</b>Late (counts present)</span><span><b style="background:#3498db">E</b>Excused (counts absent)</span><span>Tap a box to cycle &middot; AM/PM = two sessions a day &middot; <i class="fas fa-ban"></i> = no-school day</span></div>
+<div id="regHolPanel" class="hidden" style="background:#fffaf0;border:1px solid #f0d48a;border-radius:10px;padding:12px;margin-bottom:14px"><h4 style="margin:0 0 4px;color:#8a5a00"><i class="fas fa-umbrella-beach"></i> Public holidays, mid-term break &amp; other no-school days</h4><div style="font-size:.8rem;color:#666">Days listed here are closed automatically on every class register and left out of sessions opened and attendance %.</div><div id="regHolBody"></div></div>
+<div class="rg-legend"><span><b style="background:#27ae60">P</b>Present</span><span><b style="background:#e74c3c">A</b>Absent</span><span><b style="background:#f39c12">L</b>Late (counts present)</span><span><b style="background:#3498db">E</b>Excused (counts absent)</span><span>Tap a box to cycle &middot; AM/PM = two sessions a day &middot; <i class="fas fa-ban"></i> = no-school day &middot; shaded days with a name = school-wide holiday / mid-term break</span></div>
 <div id="regGrid"></div>
 </div></div>
 
@@ -8610,6 +8612,7 @@ async function load(force){
   try{const[a,m,g]=await Promise.all([fetchAll(T.att),fetchAll(T.meta),fetchAll(T.stu)]);ingest(a,m,g);st.local=false;st.err='';}
   catch(e){st.local=true;st.err=e.message||String(e);const m=readMirror()||{};ingest(m.att||[],m.meta||[],m.gen||[]);}
   st.loaded=true;
+  await loadHol(force);
 }
 function banner(id){const e=$(id);if(!e)return;e.innerHTML=st.local?'<div class="rg-warn bad"><b><i class="fas fa-exclamation-triangle"></i> Register database tables not found.</b> Marks are being kept on <b>this device only</b> until the tables exist. If you already ran the SQL, wait a minute or run its last line (<code>notify pgrst, \'reload schema\'</code>) and tap Refresh. '+(isAdmin()?'Open <b>Register Backup</b> and run the SQL once, then restore your JSON backup.':'Ask the administrator to run the register SQL setup.')+'<br><small>'+esc(st.err)+'</small></div>':'';}
 function queueSave(){clearTimeout(ft);setStatus('Saving…');ft=setTimeout(flush,600);}
@@ -8633,13 +8636,95 @@ function getMeta(cid,wid){return st.meta.get(key(cid,wid))||{class_id:S(cid),wee
 function saveMeta(m){m.closed=m.closed||'00000';st.meta.set(key(m.class_id,m.week_id),m);pend.meta.set(key(m.class_id,m.week_id),m);queueSave();}
 function setMark(sid,cid,wid,i,ch){const r=ensureRow(sid,cid,wid);r.marks=r.marks.slice(0,i)+ch+r.marks.slice(i+1);r.marked_by=currentUser.name;r.updated_at=new Date().toISOString();pend.att.set(key(sid,wid),r);queueSave();}
 
+/* ---------- SCHOOL-WIDE NO-SCHOOL DAYS: public holidays, mid-term break, other closures ---------- */
+const HK='ngis_reg_hol_v1',HOL_SQL=`create table if not exists register_holidays(
+  day text primary key,            -- YYYY-MM-DD
+  label text not null,
+  kind text default 'holiday',     -- holiday | midterm | other
+  created_by text, created_at timestamptz default now());
+alter table register_holidays enable row level security;
+create policy "reg_hol_all" on register_holidays for all using(true) with check(true);
+notify pgrst, 'reload schema';`;
+const KIND={holiday:'Public holiday',midterm:'Mid-term break',other:'No school'};
+st.hol=new Map();st.holLoaded=false;st.holLocal=false;
+function holMirror(){try{localStorage.setItem(HK,JSON.stringify([...st.hol.values()]));}catch(e){}}
+async function loadHol(force){
+  if(st.holLoaded&&!force)return;
+  try{const rows=await fetchAll('register_holidays');st.hol=new Map(rows.map(r=>[S(r.day),{day:S(r.day),label:S(r.label),kind:S(r.kind||'holiday')}]));st.holLocal=false;holMirror();}
+  catch(e){st.holLocal=true;try{const m=JSON.parse(localStorage.getItem(HK)||'[]');st.hol=new Map(m.map(r=>[S(r.day),r]));}catch(x){st.hol=new Map();}}
+  st.holLoaded=true;
+}
+const pad2=n=>String(n).padStart(2,'0');
+const isoD=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+function wIso(w,i){if(!w||!w.start_date)return'';const d=new Date(w.start_date+'T00:00:00');if(isNaN(d))return'';const dw=d.getDay();d.setDate(d.getDate()+(dw===0?1:dw===6?2:1-dw)+i);return isoD(d);}
+const holAt=(w,i)=>{const k=wIso(w,i);return k?st.hol.get(k)||null:null;};
+/* effective closed-days string: manual no-school ticks OR a school-wide holiday on that date */
+function effClosed(closed,w){const c=S(closed||'00000').padEnd(5,'0').split('');for(let i=0;i<5;i++)if(holAt(w,i))c[i]='1';return c.join('');}
+async function holSave(rows){ // rows: [{day,label,kind}]
+  rows.forEach(r=>st.hol.set(r.day,r));holMirror();
+  if(st.holLocal)return;
+  try{for(const part of chunkArray(rows.map(r=>({...r,created_by:currentUser.name})),200)){const{error}=await supabaseClient.from('register_holidays').upsert(part,{onConflict:'day'});if(error)throw error;}}
+  catch(e){st.holLocal=true;showToast('Holiday table missing - saved on this device only. Run the SQL shown in the panel.','error');}
+}
+async function holDelete(days){
+  days.forEach(d=>st.hol.delete(d));holMirror();
+  if(st.holLocal)return;
+  try{const{error}=await supabaseClient.from('register_holidays').delete().in('day',days);if(error)throw error;}
+  catch(e){showToast('Could not delete from the database: '+(e.message||e),'error');}
+}
+function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return new Date(y,mo-1,da);}
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+function weekdayShift(d){const dw=d.getDay();return dw===6?addDays(d,2):dw===0?addDays(d,1):d;} // weekend holiday -> observed on Monday
+function standardHolidays(y){
+  const fixed=[['New Year\'s Day',0,1],['Workers\' Day',4,1],['Democracy Day',5,12],['Independence Day',9,1],['Christmas Day',11,25],['Boxing Day',11,26]];
+  const out=fixed.map(([l,m,d])=>({label:l,date:weekdayShift(new Date(y,m,d))}));
+  const e=easter(y);out.push({label:'Good Friday',date:addDays(e,-2)},{label:'Easter Monday',date:addDays(e,1)});
+  // Christmas + Boxing Day both falling on a weekend: keep Boxing Day on the next free weekday
+  const seen=new Set();return out.sort((a,b)=>a.date-b.date).map(o=>{while(seen.has(isoD(o.date))||o.date.getDay()===0||o.date.getDay()===6)o.date=addDays(o.date,1);seen.add(isoD(o.date));return{day:isoD(o.date),label:o.label,kind:'holiday'};});
+}
+function rangeDays(a,b){const out=[];let d=new Date(a+'T00:00:00'),e=new Date((b||a)+'T00:00:00');if(isNaN(d)||isNaN(e)||e<d)return out;for(;d<=e&&out.length<120;d=addDays(d,1))if(d.getDay()>=1&&d.getDay()<=5)out.push(isoD(d));return out;}
+const fmtD=iso=>{const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});};
+function holRefresh(){try{if(typeof _openCache==='object')Object.keys(_openCache).forEach(k=>delete _openCache[k]);}catch(e){}regRender();holRender();}
+window.regHolToggle=async function(){const p=$('regHolPanel');if(!p)return;p.classList.toggle('hidden');if(!p.classList.contains('hidden')){await loadHol(true);holRender();}};
+function holRender(){
+  const p=$('regHolBody');if(!p)return;
+  const list=[...st.hol.values()].sort((a,b)=>a.day.localeCompare(b.day));
+  const y=new Date().getFullYear();
+  let h='';
+  if(st.holLocal)h+='<div class="rg-warn bad"><b>Holiday table not found.</b> Holidays are kept on this device only until you run this SQL in Supabase (SQL Editor), then tap Refresh:<pre style="white-space:pre-wrap;font-size:.72rem;background:#fff;padding:8px;border-radius:6px;margin:6px 0">'+esc(HOL_SQL)+'</pre><button class="btn btn-sm btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.querySelector(\'#regHolBody pre\').textContent);showToast(\'SQL copied\')">Copy SQL</button></div>';
+  if(isAdmin()){
+    h+='<div class="rg-bar" style="margin-top:8px"><div class="form-group"><label>Type</label><select id="holKind"><option value="holiday">Public holiday</option><option value="midterm">Mid-term break</option><option value="other">Other no-school day</option></select></div>'+
+       '<div class="form-group"><label>Name / reason</label><input id="holLabel" type="text" placeholder="e.g. Mid-term break"></div>'+
+       '<div class="form-group"><label>From</label><input id="holFrom" type="date"></div>'+
+       '<div class="form-group"><label>To (optional)</label><input id="holTo" type="date"></div></div>'+
+       '<div class="rg-act"><button class="btn btn-primary btn-sm" onclick="regHolAdd()"><i class="fas fa-plus"></i> Add to register</button>'+
+       '<span style="font-size:.78rem;color:#666">Saturdays &amp; Sundays in a range are skipped. Applies to every class.</span></div>'+
+       '<div class="rg-act"><b style="font-size:.82rem">Quick add for</b><input id="holYear" type="number" value="'+y+'" style="width:84px;padding:6px;border:1px solid #ccc;border-radius:6px"><button class="btn btn-sm btn-accent" onclick="regHolStd()"><i class="fas fa-flag"></i> Standard Nigerian public holidays</button>'+
+       '<span style="font-size:.78rem;color:#666">New Year, Good Friday, Easter Monday, Workers\' Day, Democracy Day, Independence Day, Christmas &amp; Boxing Day. Eid and Mawlid follow moon sighting, so add those yourself once announced.</span></div>';
+  }
+  h+=list.length?'<div class="rg-tw"><table class="rgs"><thead><tr><th>Date</th><th>Type</th><th>Name</th>'+(isAdmin()?'<th></th>':'')+'</tr></thead><tbody>'+list.map(r=>'<tr><td>'+esc(fmtD(r.day))+'</td><td>'+esc(KIND[r.kind]||r.kind)+'</td><td>'+esc(r.label)+'</td>'+(isAdmin()?'<td><button class="btn btn-sm btn-danger" onclick="regHolDel(\''+esc(r.day)+'\')"><i class="fas fa-trash"></i></button></td>':'')+'</tr>').join('')+'</tbody></table></div>':'<div class="empty-state" style="padding:16px">No holidays or breaks added yet.</div>';
+  p.innerHTML=h;
+}
+window.regHolAdd=async function(){
+  if(!isAdmin())return;const kind=$('holKind').value,label=$('holLabel').value.trim()||KIND[kind],from=$('holFrom').value,to=$('holTo').value||from;
+  if(!from){showToast('Pick a date','error');return;}
+  const days=rangeDays(from,to);if(!days.length){showToast('No school days (Mon-Fri) in that range','error');return;}
+  await holSave(days.map(day=>({day,label,kind})));showToast(days.length+' day(s) added to the register');$('holFrom').value='';$('holTo').value='';holRefresh();
+};
+window.regHolStd=async function(){
+  if(!isAdmin())return;const y=+$('holYear').value;if(!(y>=2000&&y<=2100)){showToast('Enter a valid year','error');return;}
+  const rows=standardHolidays(y).filter(r=>!st.hol.has(r.day));if(!rows.length){showToast('Those holidays are already added');return;}
+  await holSave(rows);showToast(rows.length+' public holiday(s) added for '+y);holRefresh();
+};
+window.regHolDel=async function(day){if(!isAdmin())return;if(!confirm('Remove this day? The register for that date will open again.'))return;await holDelete([day]);holRefresh();};
+
 /* ---------- AUTO CALCULATION: week ---------- */
 function calcWeek(cid,wid){
-  const stu=classStudents(cid),meta=getMeta(cid,wid),half=Array.from({length:10},()=>({B:0,G:0,U:0,abs:0,n:0}));
+  const stu=classStudents(cid),meta=getMeta(cid,wid),cz=effClosed(meta.closed,wObj(wid)),half=Array.from({length:10},()=>({B:0,G:0,U:0,abs:0,n:0}));
   const r={rows:[],half,roll:stu.length,boys:0,girls:0,unk:0,P:0,A:0,L:0,E:0,poss:0,bP:0,bPoss:0,gP:0,gPoss:0};
   stu.forEach(s=>{const m=marksOf(s.id,wid),g=gender(s);let p=0,a=0,l=0,e=0;
     if(g==='B')r.boys++;else if(g==='G')r.girls++;else r.unk++;
-    for(let i=0;i<10;i++){if(meta.closed[i>>1]==='1')continue;const c=m[i];if(c==='-')continue;const h=half[i];h.n++;
+    for(let i=0;i<10;i++){if(cz[i>>1]==='1')continue;const c=m[i];if(c==='-')continue;const h=half[i];h.n++;
       if(c==='P'||c==='L'){p++;h[g||'U']++;if(c==='L')l++;}else{a++;h.abs++;if(c==='E')e++;}}
     const poss=p+a;r.rows.push({s,g,p,a,l,e,poss,pct:poss?p/poss*100:null});
     r.P+=p;r.A+=a;r.L+=l;r.E+=e;r.poss+=poss;if(g==='B'){r.bP+=p;r.bPoss+=poss;}else if(g==='G'){r.gP+=p;r.gPoss+=poss;}});
@@ -8676,11 +8761,11 @@ const DFULL=['Mon','Tue','Wed','Thu','Fri'];
 function todayIdx(w){const d=new Date().getDay();return(d>=1&&d<=5)?d-1:0;}
 function renderMobile(cid,wid,w,stu,meta,edit){
   if(st.mDay==null)st.mDay=todayIdx(w);
-  const d=st.mDay,cl=meta.closed[d]==='1';
+  const cz=effClosed(meta.closed,w),d=st.mDay,cl=cz[d]==='1',hd=holAt(w,d);
   let h='<div class="rgm"><div class="rgm-tabs">';
-  DFULL.forEach((n,i)=>{const c=meta.closed[i]==='1';h+='<button type="button" class="rgm-tab'+(i===d?' on':'')+(c?' cl':'')+'" data-d="'+i+'"><b>'+n+'</b><small>'+(wDate(w,i)||'&nbsp;')+'</small></button>';});
-  h+='</div><div class="rgm-bar"><div class="rgm-stat" id="rgmStat"></div>'+(edit?'<button type="button" class="rgm-nd" onclick="regDay('+d+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i> '+(cl?'Re-open day':'No school')+'</button>':'')+'</div>';
-  if(cl){return h+'<div class="empty-state" style="padding:26px 10px">'+DFULL[d]+' is marked as a no-school day.</div></div><div id="regSum"></div>';}
+  DFULL.forEach((n,i)=>{const c=cz[i]==='1';h+='<button type="button" class="rgm-tab'+(i===d?' on':'')+(c?' cl':'')+'" data-d="'+i+'"><b>'+n+'</b><small>'+(wDate(w,i)||'&nbsp;')+'</small></button>';});
+  h+='</div><div class="rgm-bar"><div class="rgm-stat" id="rgmStat"></div>'+(edit&&!hd?'<button type="button" class="rgm-nd" onclick="regDay('+d+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i> '+(cl?'Re-open day':'No school')+'</button>':'')+'</div>';
+  if(cl){return h+'<div class="empty-state" style="padding:26px 10px">'+DFULL[d]+(hd?' is a school-wide no-school day: <b>'+esc(hd.label)+'</b> ('+esc(KIND[hd.kind]||'')+').':' is marked as a no-school day.')+'</div></div><div id="regSum"></div>';}
   h+='<table class="rgm-t"><thead><tr><th class="sname">Student ('+stu.length+')</th><th>AM'+(edit?'<button type="button" class="rg-x" onclick="regAll('+(d*2)+')">✓ all</button>':'')+'</th><th>PM'+(edit?'<button type="button" class="rg-x" onclick="regAll('+(d*2+1)+')">✓ all</button>':'')+'</th></tr></thead><tbody>';
   stu.forEach((s,n)=>{const m=marksOf(s.id,wid),g=gender(s);
     h+='<tr data-sid="'+esc(s.id)+'"><td class="sname"><button class="rg-g '+g+'" title="Set Boy / Girl">'+(g||'?')+'</button><span>'+esc(s.name)+'</span></td>'+cellHtml(m[d*2],d*2,edit)+cellHtml(m[d*2+1],d*2+1,edit)+'</tr>';});
@@ -8694,26 +8779,27 @@ window.regRender=function(){
   if(!stu.length){box.innerHTML='<div class="empty-state">No students in this class yet.</div>';return;}
   const meta=getMeta(cid,wid),edit=canEditClass(cid,meta);
   if(isMobileReg()){box.innerHTML=renderMobile(cid,wid,w,stu,meta,edit);regCalc();return;}
+  const cz=effClosed(meta.closed,w);
   let h='<div class="rg-wrap"><table class="rgt"><thead><tr><th rowspan="2" class="sn">#</th><th rowspan="2" class="sname">Student</th>';
-  DL.forEach((d,i)=>{const cl=meta.closed[i]==='1';h+='<th colspan="2" class="'+(cl?'cl':'')+'">'+d+'<small>'+wDate(w,i)+'</small>'+(edit?'<button class="rg-x" title="No-school day on/off" onclick="regDay('+i+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i></button>':'')+'</th>';});
+  DL.forEach((d,i)=>{const cl=cz[i]==='1',hd=holAt(w,i);h+='<th colspan="2" class="'+(cl?'cl':'')+'"'+(hd?' title="'+esc(hd.label)+'"':'')+'>'+d+'<small>'+wDate(w,i)+'</small>'+(hd?'<small style="display:block;font-size:.62rem;line-height:1.1;color:#8a5a00;font-weight:700">'+esc(hd.kind==='midterm'?'Mid-term':hd.kind==='holiday'?'Holiday':'No school')+'<br>'+esc(hd.label)+'</small>':'')+(edit&&!hd?'<button class="rg-x" title="No-school day on/off" onclick="regDay('+i+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i></button>':'')+'</th>';});
   h+='<th rowspan="2">Pres</th><th rowspan="2">Abs</th><th rowspan="2">%</th></tr><tr>';
-  for(let i=0;i<10;i++)h+='<th>'+(i%2?'PM':'AM')+(edit&&meta.closed[i>>1]!=='1'?'<button class="rg-x" title="Mark column present" onclick="regAll('+i+')">✓</button>':'')+'</th>';
+  for(let i=0;i<10;i++)h+='<th>'+(i%2?'PM':'AM')+(edit&&cz[i>>1]!=='1'?'<button class="rg-x" title="Mark column present" onclick="regAll('+i+')">✓</button>':'')+'</th>';
   h+='</tr></thead><tbody>';
   stu.forEach((s,n)=>{const m=marksOf(s.id,wid),g=gender(s);
     h+='<tr data-sid="'+esc(s.id)+'"><td class="sn">'+(n+1)+'</td><td class="sname"><button class="rg-g '+g+'" title="Set Boy / Girl">'+(g||'?')+'</button>'+esc(s.name)+'</td>';
-    for(let i=0;i<10;i++){const cl=meta.closed[i>>1]==='1';h+=cl?'<td class="cl">—</td>':cellHtml(m[i],i,edit);}
+    for(let i=0;i<10;i++){const cl=cz[i>>1]==='1';h+=cl?'<td class="cl">—</td>':cellHtml(m[i],i,edit);}
     h+='<td class="rp"></td><td class="ra"></td><td class="rpc"></td></tr>';});
   h+='</tbody><tfoot id="regFoot"></tfoot></table></div><div id="regSum"></div>';
   box.innerHTML=h;regCalc();
 };
 function regCalc(){
   const cid=$('regClass').value,wid=$('regWeek').value;if(!cid||!wid||(!$('regFoot')&&!$('rgmStat')&&!$('regSum')))return;
-  const c=calcWeek(cid,wid),meta=getMeta(cid,wid);
+  const c=calcWeek(cid,wid),meta=getMeta(cid,wid),cz=effClosed(meta.closed,wObj(wid));
   if($('rgmStat')){const d=st.mDay||0,a=c.half[d*2],b=c.half[d*2+1],pr=h=>h.B+h.G+h.U;
     $('rgmStat').innerHTML='<span><b>AM</b> <i class="pcg">'+pr(a)+'</i> present · <i class="pcr">'+a.abs+'</i> absent</span><span><b>PM</b> <i class="pcg">'+pr(b)+'</i> present · <i class="pcr">'+b.abs+'</i> absent</span>';}
   if($('regFoot')){
   document.querySelectorAll('#regGrid tbody tr').forEach((tr,i)=>{const r=c.rows[i];if(!r)return;const p=tr.querySelector('.rp');if(!p)return;p.textContent=r.p;tr.querySelector('.ra').textContent=r.a;const e=tr.querySelector('.rpc');e.textContent=fp(r.pct);e.className='rpc '+pcCls(r.pct);});
-  const row=(lbl,f,tot)=>{let x='<tr><td colspan="2" class="lbl">'+lbl+'</td>';for(let i=0;i<10;i++)x+=meta.closed[i>>1]==='1'?'<td>—</td>':'<td>'+f(c.half[i])+'</td>';return x+'<td colspan="3">'+tot+'</td></tr>';};
+  const row=(lbl,f,tot)=>{let x='<tr><td colspan="2" class="lbl">'+lbl+'</td>';for(let i=0;i<10;i++)x+=cz[i>>1]==='1'?'<td>—</td>':'<td>'+f(c.half[i])+'</td>';return x+'<td colspan="3">'+tot+'</td></tr>';};
   $('regFoot').innerHTML=row('Boys present',h=>h.B,c.bP)+row('Girls present',h=>h.G,c.gP)+(c.unk?row('Gender not set',h=>h.U,''):'')+row('Total present',h=>h.B+h.G+h.U,c.P)+row('Total absent',h=>h.abs,c.A);
   }
   const sg=meta.signed_by?'<div class="rg-sign">'+esc(meta.signed_by)+'</div><small>Signed '+esc(S(meta.signed_at).slice(0,10))+(meta.locked?' · locked':'')+'</small>':'<div class="rg-sign"></div><small>Not yet signed</small>';
@@ -8736,11 +8822,11 @@ function bindGrid(){const box=$('regGrid');if(box.dataset.b)return;box.dataset.b
       st.gen[S(sid)]=nx;pend.gen.set(S(sid),{student_id:S(sid),gender:nx});queueSave();g.className='rg-g '+nx;g.textContent=nx||'?';regCalc();}
   });}
 let _rgMob=null;window.addEventListener('resize',()=>{const m=isMobileReg();if(_rgMob!==null&&m!==_rgMob&&$('regGrid')&&$('regGrid').dataset.b&&$('regMark')&&!$('regMark').classList.contains('hidden'))regRender();_rgMob=m;});_rgMob=isMobileReg();
-window.regDay=function(i){const cid=$('regClass').value,wid=$('regWeek').value,m={...getMeta(cid,wid)};m.closed=m.closed.slice(0,i)+(m.closed[i]==='1'?'0':'1')+m.closed.slice(i+1);saveMeta(m);regRender();};
+window.regDay=function(i){const cid=$('regClass').value,wid=$('regWeek').value,hd=holAt(wObj(wid),i);if(hd){showToast(hd.label+' is a school-wide no-school day (remove it from Holidays & Breaks to re-open)','error');return;}const m={...getMeta(cid,wid)};m.closed=m.closed.slice(0,i)+(m.closed[i]==='1'?'0':'1')+m.closed.slice(i+1);saveMeta(m);regRender();};
 window.regAll=function(i){const cid=$('regClass').value,wid=$('regWeek').value;classStudents(cid).forEach(s=>{if(marksOf(s.id,wid)[i]==='-')setMark(s.id,cid,wid,i,'P');});regRender();};
 window.regMarkAllWeek=function(){const cid=$('regClass').value,wid=$('regWeek').value;if(!cid||!wid)return;const meta=getMeta(cid,wid);if(!canEditClass(cid,meta)){showToast('This week is locked or not your class','error');return;}
   if(!confirm('Mark every empty box this week as Present?'))return;
-  classStudents(cid).forEach(s=>{const m=marksOf(s.id,wid);for(let i=0;i<10;i++)if(m[i]==='-'&&meta.closed[i>>1]!=='1')setMark(s.id,cid,wid,i,'P');});regRender();};
+  classStudents(cid).forEach(s=>{const m=marksOf(s.id,wid);for(let i=0;i<10;i++)if(m[i]==='-'&&effClosed(meta.closed,wObj(wid))[i>>1]!=='1')setMark(s.id,cid,wid,i,'P');});regRender();};
 window.regSign=function(){const cid=$('regClass').value,wid=$('regWeek').value;if(!cid||!wid)return;const meta=getMeta(cid,wid);if(!canEditClass(cid,meta)){showToast('You cannot sign this week','error');return;}
   if(!confirm('Sign and submit this week? The register will be locked (only admin can unlock).'))return;
   saveMeta({...meta,signed_by:currentUser.name,signed_at:new Date().toISOString(),locked:true});regRender();showToast('Week signed and submitted');};
@@ -8803,8 +8889,8 @@ const CSVH=['student_id','student_name','class_id','class_name','gender','week_i
 const q=v=>{v=S(v);return/[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
 function csvRows(){const out=[];
   [...st.att.values()].filter(r=>scopeClass(r.class_id)).forEach(r=>{const s=students.find(x=>sameId(x.id,r.student_id)),w=wObj(r.week_id)||{},m=getMeta(r.class_id,r.week_id),t=terms.find(x=>sameId(x.id,w.term_id))||{},se=sessions.find(x=>sameId(x.id,w.session_id))||{};
-    const p=[...r.marks].filter((c,i)=>(c==='P'||c==='L')&&m.closed[i>>1]!=='1').length,a=[...r.marks].filter((c,i)=>(c==='A'||c==='E')&&m.closed[i>>1]!=='1').length;
-    out.push([r.student_id,s?s.name:'',r.class_id,cName(r.class_id),s?gender(s):'',r.week_id,w.name||'',t.name||'',se.name||'',...[...r.marks].map(c=>c==='-'?'':c),m.closed,m.signed_by||'',m.locked?1:0,p,p+a,(p+a)?(p/(p+a)*100).toFixed(1):'']);});
+    const ec=effClosed(m.closed,w),p=[...r.marks].filter((c,i)=>(c==='P'||c==='L')&&ec[i>>1]!=='1').length,a=[...r.marks].filter((c,i)=>(c==='A'||c==='E')&&ec[i>>1]!=='1').length;
+    out.push([r.student_id,s?s.name:'',r.class_id,cName(r.class_id),s?gender(s):'',r.week_id,w.name||'',t.name||'',se.name||'',...[...r.marks].map(c=>c==='-'?'':c),ec,m.signed_by||'',m.locked?1:0,p,p+a,(p+a)?(p/(p+a)*100).toFixed(1):'']);});
   return out;}
 window.regExportCsv=async function(){await load();await flush();dl('NGIS_register_backup_'+stamp()+'.csv','\ufeff'+[CSVH,...csvRows()].map(r=>r.map(q).join(',')).join('\r\n'),'text/csv');showToast('CSV backup downloaded');};
 window.regCsvTemplate=function(){const s=students[0]||{id:'',name:'Sample Student',class_id:''},w=weeks[0]||{id:'',name:'Week 1'};
@@ -8962,11 +9048,12 @@ window.ngisRegisterTermSummary=async function(classId,termId,sessionId){
     for(let i=0;;i+=1000){const r=await supabaseClient.from(T.att).select('student_id,week_id,marks').eq('class_id',cid).in('week_id',wids).range(i,i+999);if(r.error)throw r.error;att=att.concat(r.data||[]);if(!r.data||r.data.length<1000)break;}
     const m=await supabaseClient.from(T.meta).select('week_id,closed').eq('class_id',cid).in('week_id',wids);if(m.error)throw m.error;meta=m.data||[];
   }catch(e){okDb=false;const mm=readMirror()||{};att=(mm.att||[]).filter(r=>S(r.class_id)===cid&&wids.includes(S(r.week_id)));meta=(mm.meta||[]).filter(r=>S(r.class_id)===cid&&wids.includes(S(r.week_id)));if(!att.length)return{ok:false,opened:0,by:{}};}
+  try{await loadHol();}catch(e){}
   const closedOf={};meta.forEach(m=>{closedOf[S(m.week_id)]=S(m.closed||'00000');});
   const byWeek={};att.forEach(r=>{(byWeek[S(r.week_id)]=byWeek[S(r.week_id)]||[]).push(r);});
   let opened=0;const by={};
   Object.keys(byWeek).forEach(w=>{
-    const closed=closedOf[w]||'00000';
+    const closed=effClosed(closedOf[w]||'00000',wObj(w)||(weeks||[]).find(x=>S(x.id)===S(w)));
     for(let i=0;i<10;i++){if(closed[i>>1]==='1')continue;
       if(byWeek[w].some(r=>S(r.marks).length===10&&r.marks[i]!=='-'))opened++;}
     byWeek[w].forEach(r=>{const mk=S(r.marks);if(mk.length!==10)return;const o=by[S(r.student_id)]=by[S(r.student_id)]||{p:0,a:0,l:0};
@@ -8990,9 +9077,10 @@ window.ngisSchoolOpenedTerm=async function(termId,sessionId){
     for(let i=0;;i+=1000){const r=await supabaseClient.from(T.att).select('class_id,week_id,marks').in('week_id',wids).range(i,i+999);if(r.error)throw r.error;att=att.concat(r.data||[]);if(!r.data||r.data.length<1000)break;}
     for(let i=0;;i+=1000){const r=await supabaseClient.from(T.meta).select('class_id,week_id,closed').in('week_id',wids).range(i,i+999);if(r.error)throw r.error;meta=meta.concat(r.data||[]);if(!r.data||r.data.length<1000)break;}
   }catch(e){const mm=readMirror()||{};att=(mm.att||[]).filter(r=>wids.includes(S(r.week_id)));meta=(mm.meta||[]).filter(r=>wids.includes(S(r.week_id)));}
+  try{await loadHol();}catch(e){}
   const closedOf={};meta.forEach(m=>{closedOf[S(m.class_id)+'|'+S(m.week_id)]=S(m.closed||'00000');});
   const open=new Set();
-  att.forEach(r=>{const mk=S(r.marks);if(mk.length!==10)return;const closed=closedOf[S(r.class_id)+'|'+S(r.week_id)]||'00000';
+  att.forEach(r=>{const mk=S(r.marks);if(mk.length!==10)return;const closed=effClosed(closedOf[S(r.class_id)+'|'+S(r.week_id)]||'00000',wObj(r.week_id));
     for(let i=0;i<10;i++){if(closed[i>>1]==='1')continue;if(mk[i]!=='-')open.add(S(r.week_id)+'|'+i);}});
   const v=open.size?{ok:true,sessions:open.size,days:open.size/2}:{ok:false,sessions:0,days:null};
   _openCache[ck]={t:Date.now(),v};return v;
