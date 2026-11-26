@@ -8657,6 +8657,8 @@ async function loadHol(force){
 const pad2=n=>String(n).padStart(2,'0');
 const isoD=d=>d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
 function wIso(w,i){if(!w||!w.start_date)return'';const d=new Date(w.start_date+'T00:00:00');if(isNaN(d))return'';const dw=d.getDay();d.setDate(d.getDate()+(dw===0?1:dw===6?2:1-dw)+i);return isoD(d);}
+const holTag=h=>h.kind==='midterm'?'Break':h.kind==='holiday'?'Holiday':'No school';
+const holSub=h=>{const t=holTag(h),l=S(h.label).trim();return '<b>'+esc(t)+'</b>'+(l&&l.toLowerCase()!==t.toLowerCase()&&l.toLowerCase()!==(KIND[h.kind]||'').toLowerCase()?'<br>'+esc(l):'');};
 const holAt=(w,i)=>{const k=wIso(w,i);return k?st.hol.get(k)||null:null;};
 /* effective closed-days string: manual no-school ticks OR a school-wide holiday on that date */
 function effClosed(closed,w){const c=S(closed||'00000').padEnd(5,'0').split('');for(let i=0;i<5;i++)if(holAt(w,i))c[i]='1';return c.join('');}
@@ -8763,7 +8765,7 @@ function renderMobile(cid,wid,w,stu,meta,edit){
   if(st.mDay==null)st.mDay=todayIdx(w);
   const cz=effClosed(meta.closed,w),d=st.mDay,cl=cz[d]==='1',hd=holAt(w,d);
   let h='<div class="rgm"><div class="rgm-tabs">';
-  DFULL.forEach((n,i)=>{const c=cz[i]==='1';h+='<button type="button" class="rgm-tab'+(i===d?' on':'')+(c?' cl':'')+'" data-d="'+i+'"><b>'+n+'</b><small>'+(wDate(w,i)||'&nbsp;')+'</small></button>';});
+  DFULL.forEach((n,i)=>{const c=cz[i]==='1';h+='<button type="button" class="rgm-tab'+(i===d?' on':'')+(c?' cl':'')+'" data-d="'+i+'"><b>'+n+'</b><small>'+(wDate(w,i)||'&nbsp;')+'</small>'+(holAt(w,i)?'<small style="color:#8a5a00;font-weight:700;font-size:.6rem">'+esc(holTag(holAt(w,i)))+'</small>':'')+'</button>';});
   h+='</div><div class="rgm-bar"><div class="rgm-stat" id="rgmStat"></div>'+(edit&&!hd?'<button type="button" class="rgm-nd" onclick="regDay('+d+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i> '+(cl?'Re-open day':'No school')+'</button>':'')+'</div>';
   if(cl){return h+'<div class="empty-state" style="padding:26px 10px">'+DFULL[d]+(hd?' is a school-wide no-school day: <b>'+esc(hd.label)+'</b> ('+esc(KIND[hd.kind]||'')+').':' is marked as a no-school day.')+'</div></div><div id="regSum"></div>';}
   h+='<table class="rgm-t"><thead><tr><th class="sname">Student ('+stu.length+')</th><th>AM'+(edit?'<button type="button" class="rg-x" onclick="regAll('+(d*2)+')">✓ all</button>':'')+'</th><th>PM'+(edit?'<button type="button" class="rg-x" onclick="regAll('+(d*2+1)+')">✓ all</button>':'')+'</th></tr></thead><tbody>';
@@ -8781,7 +8783,7 @@ window.regRender=function(){
   if(isMobileReg()){box.innerHTML=renderMobile(cid,wid,w,stu,meta,edit);regCalc();return;}
   const cz=effClosed(meta.closed,w);
   let h='<div class="rg-wrap"><table class="rgt"><thead><tr><th rowspan="2" class="sn">#</th><th rowspan="2" class="sname">Student</th>';
-  DL.forEach((d,i)=>{const cl=cz[i]==='1',hd=holAt(w,i);h+='<th colspan="2" class="'+(cl?'cl':'')+'"'+(hd?' title="'+esc(hd.label)+'"':'')+'>'+d+'<small>'+wDate(w,i)+'</small>'+(hd?'<small style="display:block;font-size:.62rem;line-height:1.1;color:#8a5a00;font-weight:700">'+esc(hd.kind==='midterm'?'Mid-term':hd.kind==='holiday'?'Holiday':'No school')+'<br>'+esc(hd.label)+'</small>':'')+(edit&&!hd?'<button class="rg-x" title="No-school day on/off" onclick="regDay('+i+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i></button>':'')+'</th>';});
+  DL.forEach((d,i)=>{const cl=cz[i]==='1',hd=holAt(w,i);h+='<th colspan="2" class="'+(cl?'cl':'')+'"'+(hd?' title="'+esc(hd.label)+'"':'')+'>'+d+'<small>'+wDate(w,i)+'</small>'+(hd?'<small style="display:block;font-size:.62rem;line-height:1.15;color:#8a5a00;white-space:normal">'+holSub(hd)+'</small>':'')+(edit&&!hd?'<button class="rg-x" title="No-school day on/off" onclick="regDay('+i+')"><i class="fas fa-'+(cl?'lock-open':'ban')+'"></i></button>':'')+'</th>';});
   h+='<th rowspan="2">Pres</th><th rowspan="2">Abs</th><th rowspan="2">%</th></tr><tr>';
   for(let i=0;i<10;i++)h+='<th>'+(i%2?'PM':'AM')+(edit&&cz[i>>1]!=='1'?'<button class="rg-x" title="Mark column present" onclick="regAll('+i+')">✓</button>':'')+'</th>';
   h+='</tr></thead><tbody>';
